@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+//commandDB variable
 var commandDB *pgxpool.Pool
 
 func initResourcesOrFail() {
