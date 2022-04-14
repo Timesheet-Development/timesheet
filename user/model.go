@@ -3,7 +3,7 @@ package user
 import "time"
 
 /*<<<<---User--->>>>
-Contains fields which discuss about a employee or a person in a organization. Checking
+Contains fields which discuss about a employee or a person in a organization. ///Checking
 */
 type User struct {
 	Id                   int
