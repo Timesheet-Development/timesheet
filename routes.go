@@ -17,7 +17,10 @@ func addRoutes(r *chi.Mux) {
 }
 
 func addIAMRoutes(r *chi.Mux) {
+	r.Route("/iam", func(r chi.Router) {
 
+		r.Post("/createUser", CreateUser)
+	})
 }
 
 func printRoutes(r *chi.Mux) {
@@ -32,5 +35,4 @@ func printRoutes(r *chi.Mux) {
 	if err := chi.Walk(r, walkFunc); err != nil {
 		fmt.Printf("Logging err: %s\n", err.Error())
 	}
-
 }
