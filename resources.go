@@ -5,10 +5,13 @@ import (
 	"os"
 	"timesheet/db"
 
+	"timesheet/user"
+
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 //commandDB variable
+//database/sql, sqlx, pgx,
 var commandDB *pgxpool.Pool
 
 func initResourcesOrFail() {
@@ -40,6 +43,11 @@ func initCommandDatabase() bool {
 	return true
 }
 
+var userService user.Service
+
 func initServices() {
 	log.Println("Initialising services")
+
+	userService = user.NewService(user.NewRepository(commandDB))
+	log.Println("Initialising services done")
 }

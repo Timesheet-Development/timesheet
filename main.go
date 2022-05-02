@@ -19,6 +19,7 @@ func main() {
 	if err := initConfig(); err != nil {
 		log.Fatalf("Failed loading configuration. err=%s\n", err.Error())
 	}
+
 	//Setup router and middleware
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -30,6 +31,7 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	//cors code
+
 	cors := cors.New(cors.Options{
 		AllowedOrigins: []string{"https://*", "http://*", "*"},
 		// AllowOriginFunc:  func(r *http.Request, origin string) bool { return true },
@@ -39,6 +41,7 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           300, // Maximum value not ignored by any of major browsers
 	})
+
 	//	log.Println("cors",cors)
 	r.Use(cors.Handler)
 
