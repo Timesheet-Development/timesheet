@@ -16,6 +16,7 @@ func addRoutes(r *chi.Mux) {
 	log.Println("Registering routes .. done")
 }
 
+//making changes
 func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
