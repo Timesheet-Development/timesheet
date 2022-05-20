@@ -19,6 +19,8 @@ type Service interface {
 
 	//CreateUser will create a new record in database if exists it will raise a error
 	CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
+
+	ForgotPassword(ctx context.Context, loginName string, updPswd *UpdatePassword) (string, error)
 }
 
 var UserAlreadyExists = &res.ResponseCode{Code: "UserAlreadyExists", Message: "User already exists", HttpStatus: http.StatusBadRequest}
@@ -71,7 +73,6 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 		log.Error().Err(err).Msgf("Error occurred while hashing password for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
 		return nil, err
 	}
-	//log.Info().Msgf("Password generated is [%s]\n", passwordHash)
 	iam.Password = string(passwordHash)
 
 	if err = bcrypt.CompareHashAndPassword(passwordHash, []byte(iam.Password)); err != nil {
@@ -79,10 +80,6 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 	}
 
 	ID := &iam.Id
-
-	// if strings.Contains(iam.JobTitle, "Sr.") {
-
-	// }
 
 	log.Info().Msgf("Inserting User [%s]\n", iam.LoginName)
 
@@ -127,4 +124,38 @@ func (svc *service) GetUser(ctx context.Context, loginName string) (*User, error
 
 	log.Info().Msgf("User [%s] found", loginName)
 	return user, nil
+}
+
+func (s *service) ForgotPassword(ctx context.Context, loginName string, updPswd *UpdatePassword) (string, error) {
+	var err error
+	user := &User{}
+
+	user, err = s.GetUser(ctx, loginName)
+	if err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("User details not found for the given loginName")
+		return "", err
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updPswd.OldPassword)); err != nil {
+		log.Info().Msg("Password Hash generated does not match the password! ")
+	}
+
+	//Generating new hash for the user
+	log.Info().Msgf("Generating password hash for [%s]\n", loginName)
+
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(updPswd.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		log.Printf("Error occurred while hashing password for user [%s]. Error is [%s]\n", user.LoginName, err.Error())
+		return "", err
+	}
+	log.Info().Msgf("Password generated is [%s]\n", passwordHash)
+
+	log.Info().Msg("Contacting repo to update password")
+
+	if loginName, err = s.repo.UpdatePassword(ctx, passwordHash, loginName); err != nil {
+		log.Error().Err(err).Msg("Error while updating new password")
+		return "", err
+	}
+
+	return loginName, nil
 }
