@@ -16,10 +16,17 @@ func addRoutes(r *chi.Mux) {
 	log.Println("Registering routes .. done")
 }
 
+//http://localhost:8085/iam/users
+
 func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
-		r.Post("/createUser", CreateUser)
+		r.Post("/users", createUser)
+
+		r.Put("/users/{loginName}", forgotPassword)
+
+		r.Post("/users/{loginName}", loginUser)
+
 	})
 }
 
