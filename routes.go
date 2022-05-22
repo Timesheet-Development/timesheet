@@ -21,7 +21,7 @@ func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
 		r.Post("/createUser", CreateUser)
-	})
+	
 }
 
 func printRoutes(r *chi.Mux) {
