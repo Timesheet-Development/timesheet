@@ -51,5 +51,4 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 
 }
 func createTimesheet(w http.ResponseWriter, r *http.Request) {
-
 }

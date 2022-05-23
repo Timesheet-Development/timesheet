@@ -12,6 +12,7 @@ import (
 func addRoutes(r *chi.Mux) {
 	log.Println("Registering routes")
 	addIAMRoutes(r)
+	addTimesheetRoutes(r)
 
 	log.Println("Registering routes .. done")
 }
@@ -33,7 +34,11 @@ func addIAMRoutes(r *chi.Mux) {
 		r.Post("/timesheet", createTimesheet)
 		r.Put("/users/{loginName}", forgotPassword)
 
-		r.Post("/users/{loginName}", loginUser)
+	})
+}
+
+func addTimesheetRoutes(r *chi.Mux) {
+	r.Route("/timesheets", func(r chi.Router) {
 
 	})
 >>>>>>> 4637d44f525e9ec921f1396ad4a225e81153a5b0
