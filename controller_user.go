@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//
 func createUser(w http.ResponseWriter, r *http.Request) {
 	var err error
 	userReq := &user.User{}
