@@ -15,6 +15,8 @@ type Repository interface {
 	SelectUserByLoginName(ctx context.Context, loginName string) (*User, error)
 
 	InsertUser(ctx context.Context, user *User) (*uuid.UUID, error)
+
+	UpdatePassword(ctx context.Context, psswd []byte, loginName string) (string, error)
 }
 
 type repository struct {
@@ -51,7 +53,6 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 	security_no, dob, city, state, job_title, is_perm, gender, passport, reporting_mngr) 
 	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
 	`
-
 	user.Id = uuid.New()
 
 	var tag pgconn.CommandTag
@@ -82,4 +83,16 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 	log.Printf("Rows affectd [%d]\n", tag.RowsAffected())
 
 	return &user.Id, nil
+}
+
+func (repo *repository) UpdatePassword(ctx context.Context, psswd []byte, loginName string) (string, error) {
+	var err error
+	updPswdQry := `update users set password=$1
+				  where login_name=$2`
+
+	if _, err = repo.db.Exec(ctx, updPswdQry, psswd, loginName); err != nil {
+		log.Printf("Unable to perform update password. Error is [%v]\n", err)
+		return "", err
+	}
+	return loginName, nil
 }
