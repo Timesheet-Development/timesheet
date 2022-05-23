@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"timesheet/db"
+	"timesheet/timesheets"
 
 	"timesheet/user"
 
@@ -45,9 +46,14 @@ func initCommandDatabase() bool {
 
 var userService user.Service
 
+var timesheetService timesheets.Service
+
 func initServices() {
 	log.Println("Initialising services")
 
 	userService = user.NewService(user.NewRepository(commandDB))
+
+	timesheetService = timesheets.NewService(timesheets.NewRepository(commandDB))
+
 	log.Println("Initialising services done")
 }
