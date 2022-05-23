@@ -27,6 +27,7 @@ func addIAMRoutes(r *chi.Mux) {
 
 		r.Post("/users/{loginName}", loginUser)
 
+		r.Get("/timesheets/{loginName}/{week}", getTimesheetsByWeek)
 	})
 }
 
