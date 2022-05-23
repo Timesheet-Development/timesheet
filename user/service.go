@@ -136,24 +136,32 @@ func (s *service) ForgotPassword(ctx context.Context, loginName string, updPswd 
 		return "", err
 	}
 
-	if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updPswd.OldPassword)); err != nil {
-		log.Info().Msg("Password Hash generated does not match the password! ")
-	}
+	if user != nil {
 
-	//Generating new hash for the user
-	log.Info().Msgf("Generating password hash for [%s]\n", loginName)
+		if updPswd.OldPassword != "" {
+			if err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(updPswd.OldPassword)); err != nil {
+				log.Info().Msg("Password Hash generated does not match the password! ")
+			}
+		}
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(updPswd.NewPassword), bcrypt.DefaultCost)
-	if err != nil {
-		log.Printf("Error occurred while hashing password for user [%s]. Error is [%s]\n", user.LoginName, err.Error())
-		return "", err
-	}
-	log.Info().Msgf("Password generated is [%s]\n", passwordHash)
+		//Generating new hash for the user
+		log.Info().Msgf("Generating password hash for [%s]\n", loginName)
 
-	log.Info().Msg("Contacting repo to update password")
+		passwordHash, err := bcrypt.GenerateFromPassword([]byte(updPswd.NewPassword), bcrypt.DefaultCost)
+		if err != nil {
+			log.Printf("Error occurred while hashing password for user [%s]. Error is [%s]\n", user.LoginName, err.Error())
+			return "", err
+		}
+		//log.Info().Msgf("Password generated is [%s]\n", passwordHash)
 
-	if loginName, err = s.repo.UpdatePassword(ctx, passwordHash, loginName); err != nil {
-		log.Error().Err(err).Msg("Error while updating new password")
+		log.Info().Msg("Contacting repo to update password")
+
+		if loginName, err = s.repo.UpdatePassword(ctx, passwordHash, loginName); err != nil {
+			log.Error().Err(err).Msg("Error while updating new password")
+			return "", err
+		}
+	} else {
+		log.Error().Err(err).Msgf("User info is not available with the given loginName %s\n", loginName)
 		return "", err
 	}
 

@@ -50,3 +50,7 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 func loginUser(w http.ResponseWriter, r *http.Request) {
 
 }
+
+func getTimesheetsByWeek(w http.ResponseWriter, r *http.Request) {
+
+}
