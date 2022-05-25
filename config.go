@@ -15,7 +15,7 @@ var config struct {
 	}
 }
 
-/// initialize configuration
+/// initialize configuration.
 func initConfig() error {
 	return envconfig.Init(&config)
 }

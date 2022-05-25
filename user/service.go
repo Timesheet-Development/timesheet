@@ -23,12 +23,22 @@ type Service interface {
 	CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 
 	ForgotPassword(ctx context.Context, loginName string, updPswd *UpdatePassword) (string, error)
+
+	LoginUser(ctx context.Context, user *User) (string, error)
 }
 
 var UserAlreadyExists = &res.ResponseCode{Code: "UserAlreadyExists", Message: "User already exists", HttpStatus: http.StatusBadRequest}
+var UserDoesNotExists = &res.ResponseCode{Code: "UserDoesNotExists", Message: "User Doest Not exists", HttpStatus: http.StatusBadRequest}
+
+type ServiceConfig struct {
+	Auth struct {
+		AccessTokenEncryptionKey string `envconfig:"IAM_AUTH_ACCESSTOKEN_SIGNER_KEY" json:"IamAuthAccessTokenSignerKey"`
+	}
+}
 
 type service struct {
-	repo Repository
+	repo   Repository
+	config ServiceConfig
 }
 
 func NewService(repo Repository) Service {
@@ -176,7 +186,6 @@ func createToken(user *User, signerKey string) (string, error) {
 	atClaims["authorized"] = true
 	atClaims["user_id"] = user.Id
 	atClaims["login_name"] = user.LoginName
-	//TODO: Add more claims such as FirstName, LastName, Email, Role etc..
 
 	//Set token expiry of 2 hours after which users must login again.
 	//TODO: IN future replace with access_token + refresh_token
@@ -187,4 +196,40 @@ func createToken(user *User, signerKey string) (string, error) {
 		return "", err
 	}
 	return token, nil
+}
+
+func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
+	var err error
+	//transform loginname
+	loginName := strings.ToUpper(user.LoginName)
+	if loginName == "" {
+		log.Error().Err(err).Msg("Invalid LoginName")
+		return "", err
+	}
+	log.Info().Msgf("Logging in user %s \n", loginName)
+	getUser := &User{}
+	//Hitting to the db with the available login name.
+	if getUser, err = s.GetUser(ctx, loginName); err != nil {
+		log.Error().Err(err).Msgf("User doesnot Exist with given LoginName %s \n", loginName)
+		return "", err
+	}
+
+	if getUser == nil {
+		return "", &res.AppError{ResponseCode: UserDoesNotExists, Cause: nil}
+	}
+
+	//compare his password hash
+	if err = bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(user.Password)); err != nil {
+		log.Error().Err(err).Msgf("Password for [%s] not correct. Error is [%s]", loginName, err.Error())
+		return "", err
+	}
+
+	//We nned to call jwt func and generate jwt.
+	var token string
+	if token, err = createToken(getUser, s.config.Auth.AccessTokenEncryptionKey); err != nil {
+		return "", err
+	}
+
+	return token, nil
+
 }
