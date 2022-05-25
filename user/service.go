@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 	"timesheet/commons/res"
 	"timesheet/commons/validate"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
@@ -166,4 +168,23 @@ func (s *service) ForgotPassword(ctx context.Context, loginName string, updPswd 
 	}
 
 	return loginName, nil
+}
+
+func createToken(user *User, signerKey string) (string, error) {
+	var err error
+	atClaims := jwt.MapClaims{}
+	atClaims["authorized"] = true
+	atClaims["user_id"] = user.Id
+	atClaims["login_name"] = user.LoginName
+	//TODO: Add more claims such as FirstName, LastName, Email, Role etc..
+
+	//Set token expiry of 2 hours after which users must login again.
+	//TODO: IN future replace with access_token + refresh_token
+	atClaims["exp"] = time.Now().Add(time.Hour * 2).Unix()
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+	token, err := at.SignedString([]byte(signerKey))
+	if err != nil {
+		return "", err
+	}
+	return token, nil
 }
