@@ -26,7 +26,7 @@ func addIAMRoutes(r *chi.Mux) {
 
 		r.Put("/users/{loginName}", forgotPassword)
 
-		//	r.Post("/users/{loginName}", LoginUser)
+		r.Post("/users/login", loginUser)
 
 	})
 }
