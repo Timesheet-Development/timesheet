@@ -19,7 +19,13 @@ func addRoutes(r *chi.Mux) {
 func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
-		r.Post("/createUser", CreateUser)
+		r.Post("/users", CreateUser)
+
+		r.Put("/users/{loginName}", forgotPassword)
+
+		r.Post("/users/{loginName}", loginUser)
+
+		r.Get("/timesheets/{loginName}/{week}", getTimesheetsByWeek)
 	})
 }
 
