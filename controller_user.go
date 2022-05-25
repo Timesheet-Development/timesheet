@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+//
 func createUser(w http.ResponseWriter, r *http.Request) {
 	var err error
 	userReq := &user.User{}
@@ -48,5 +49,30 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func loginUser(w http.ResponseWriter, r *http.Request) {
+	var err error
 
+<<<<<<< HEAD
+=======
+	var jwtStr string
+
+	user := &user.User{}
+	if err = json.NewDecoder(r.Body).Decode(user); err != nil {
+		log.Error().Err(err).Str("loginName", user.LoginName).Msg("Unable to parse json to user struct")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+	jwtStr, err = userService.LoginUser(r.Context(), user)
+	if err != nil {
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	} else {
+		cookie := http.Cookie{
+			Name:     "Timesheet",
+			Value:    jwtStr,
+			Secure:   true,
+			HttpOnly: true,
+		}
+		http.SetCookie(w, &cookie)
+		res.SendResponse(w, r, res.OK, jwtStr)
+	}
+
+>>>>>>> affc67372e11aff7d41374068ec5302539d93a20
 }

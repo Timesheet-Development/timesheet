@@ -21,9 +21,12 @@ type Service interface {
 	CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 
 	ForgotPassword(ctx context.Context, loginName string, updPswd *UpdatePassword) (string, error)
+
+	LoginUser(ctx context.Context, user *User) (string, error)
 }
 
 var UserAlreadyExists = &res.ResponseCode{Code: "UserAlreadyExists", Message: "User already exists", HttpStatus: http.StatusBadRequest}
+var UserDoesNotExists = &res.ResponseCode{Code: "UserDoesNotExists", Message: "User Doest Not exists", HttpStatus: http.StatusBadRequest}
 
 type service struct {
 	repo Repository
@@ -166,4 +169,31 @@ func (s *service) ForgotPassword(ctx context.Context, loginName string, updPswd 
 	}
 
 	return loginName, nil
+}
+
+func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
+	var err error
+	//transform loginname
+	loginName := strings.ToUpper(user.LoginName)
+	if loginName == "" {
+		log.Error().Err(err).Msg("Invalid LoginName")
+		return "", err
+	}
+	log.Info().Msgf("Logging in user %s \n", loginName)
+	getUser := &User{}
+	//Hitting to the db with the available login name.
+	if getUser, err = s.GetUser(ctx, loginName); err != nil {
+		log.Error().Err(err).Msgf("User doesnot Exist with given LoginName %s \n", loginName)
+		return "", err
+	}
+
+	if getUser == nil {
+		return "", &res.AppError{ResponseCode: UserDoesNotExists, Cause: nil}
+	}
+
+	//compare his password hash
+	//We nned to call jwt func and generate jwt.
+
+	return " ", nil
+
 }
