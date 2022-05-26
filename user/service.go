@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 	"timesheet/commons/res"
 	"timesheet/commons/validate"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/crypto/bcrypt"
@@ -28,8 +30,15 @@ type Service interface {
 var UserAlreadyExists = &res.ResponseCode{Code: "UserAlreadyExists", Message: "User already exists", HttpStatus: http.StatusBadRequest}
 var UserDoesNotExists = &res.ResponseCode{Code: "UserDoesNotExists", Message: "User Doest Not exists", HttpStatus: http.StatusBadRequest}
 
+type ServiceConfig struct {
+	Auth struct {
+		AccessTokenEncryptionKey string `envconfig:"IAM_AUTH_ACCESSTOKEN_SIGNER_KEY" json:"IamAuthAccessTokenSignerKey"`
+	}
+}
+
 type service struct {
-	repo Repository
+	repo   Repository
+	config ServiceConfig
 }
 
 func NewService(repo Repository) Service {
@@ -171,6 +180,24 @@ func (s *service) ForgotPassword(ctx context.Context, loginName string, updPswd 
 	return loginName, nil
 }
 
+func createToken(user *User, signerKey string) (string, error) {
+	var err error
+	atClaims := jwt.MapClaims{}
+	atClaims["authorized"] = true
+	atClaims["user_id"] = user.Id
+	atClaims["login_name"] = user.LoginName
+
+	//Set token expiry of 2 hours after which users must login again.
+	//TODO: IN future replace with access_token + refresh_token
+	atClaims["exp"] = time.Now().Add(time.Hour * 2).Unix()
+	at := jwt.NewWithClaims(jwt.SigningMethodHS256, atClaims)
+	token, err := at.SignedString([]byte(signerKey))
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
 func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
 	var err error
 	//transform loginname
@@ -192,8 +219,17 @@ func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
 	}
 
 	//compare his password hash
-	//We nned to call jwt func and generate jwt.
+	if err = bcrypt.CompareHashAndPassword([]byte(getUser.Password), []byte(user.Password)); err != nil {
+		log.Error().Err(err).Msgf("Password for [%s] not correct. Error is [%s]", loginName, err.Error())
+		return "", err
+	}
 
-	return " ", nil
+	//We nned to call jwt func and generate jwt.
+	var token string
+	if token, err = createToken(getUser, s.config.Auth.AccessTokenEncryptionKey); err != nil {
+		return "", err
+	}
+
+	return token, nil
 
 }
