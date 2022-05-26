@@ -51,8 +51,6 @@ func forgotPassword(w http.ResponseWriter, r *http.Request) {
 func loginUser(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-<<<<<<< HEAD
-=======
 	var jwtStr string
 
 	user := &user.User{}
@@ -74,5 +72,4 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		res.SendResponse(w, r, res.OK, jwtStr)
 	}
 
->>>>>>> affc67372e11aff7d41374068ec5302539d93a20
 }
