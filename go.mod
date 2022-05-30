@@ -22,6 +22,7 @@ require (
 )
 
 require (
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/georgysavva/scany v0.3.0
 	github.com/go-chi/render v1.0.1
 	github.com/google/uuid v1.3.0
