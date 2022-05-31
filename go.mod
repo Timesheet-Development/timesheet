@@ -27,6 +27,7 @@ require (
 	github.com/go-chi/render v1.0.1
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgconn v1.11.0
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/rs/zerolog v1.26.1
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
 	golang.org/x/sys v0.0.0-20211103235746-7861aae1554b // indirect
