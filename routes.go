@@ -22,12 +22,12 @@ func addRoutes(r *chi.Mux) {
 func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
+		//createUser is a POST handler which is used to create a user
 		r.Post("/users", createUser)
 
 		r.Put("/users/{loginName}", forgotPassword)
 
 		r.Post("/users/login", loginUser)
-
 	})
 }
 
