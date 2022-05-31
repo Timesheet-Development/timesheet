@@ -53,7 +53,7 @@ func initServices() {
 
 	userService = user.NewService(user.NewRepository(commandDB))
 
-	timesheetService = timesheets.NewService(timesheets.NewRepository(commandDB))
+	timesheetService = timesheets.NewService(timesheets.NewRepository(commandDB), user.NewRepository(commandDB))
 
 	log.Println("Initialising services done")
 }

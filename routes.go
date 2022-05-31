@@ -23,13 +23,16 @@ func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
 		r.Post("/users", createUser)
+		r.Post("/users/login", loginUser)
 		r.Put("/users/{loginName}", forgotPassword)
 
 	})
 }
 
 func addTimesheetRoutes(r *chi.Mux) {
-	r.Route("/timesheets", func(r chi.Router) {
+	r.Route("/users", func(r chi.Router) {
+		//http://localhost:8085/users/timesheets
+		r.Post("/timesheets", createTimesheet)
 
 	})
 }
