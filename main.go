@@ -48,7 +48,7 @@ func main() {
 	//Add custom routes
 	addRoutes(r)
 
-	//Print all routes
+	//Print all routes.
 	printRoutes(r)
 
 	//Initialize various dependent services or Fail if the resources are not bound

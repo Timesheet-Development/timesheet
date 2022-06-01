@@ -17,7 +17,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20200714003250-2b9c44734f2b // indirect
 	github.com/jackc/pgtype v1.10.0 // indirect
 	github.com/jackc/puddle v1.2.1 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	golang.org/x/text v0.3.6 // indirect
 )
 
@@ -27,6 +26,8 @@ require (
 	github.com/go-chi/render v1.0.1
 	github.com/google/uuid v1.3.0
 	github.com/jackc/pgconn v1.11.0
+	github.com/jmoiron/sqlx v1.3.5
+	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.26.1
 	golang.org/x/crypto v0.0.0-20211215165025-cf75a172585e
 	golang.org/x/sys v0.0.0-20211103235746-7861aae1554b // indirect
