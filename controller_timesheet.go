@@ -19,6 +19,7 @@ func createTimesheet(w http.ResponseWriter, r *http.Request) {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	}
 	loginName = t.LoginName
+
 	loginName, err = timesheetService.CreateTimesheet(r.Context(), t)
 	if err != nil {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)

@@ -15,11 +15,13 @@ import (
 )
 
 type Service interface {
+	//
 	IsUserAlreadyExisting(ctx context.Context, loginName string) (bool, error)
 
 	GetUser(ctx context.Context, loginName string) (*User, error)
 
-	//CreateUser will create a new record in database if exists it will raise a error
+	//CreateUser doing all business activities and checking if user existing or not. If yes contacting repo.go to
+	// initialize the functionality.
 	CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 
 	ForgotPassword(ctx context.Context, loginName string, updPswd *UpdatePassword) (string, error)
@@ -45,6 +47,8 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
+//CreateUser doing all business activities and checking if user existing or not. If yes contacting repo.go to
+// initialize the functionality.
 func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error) {
 	log.Info().Msg("User service initialized")
 
@@ -224,12 +228,11 @@ func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
 		return "", err
 	}
 
-	//We nned to call jwt func and generate jwt.
+	//We need to call jwt func and generate jwt.
 	var token string
 	if token, err = createToken(getUser, s.config.Auth.AccessTokenEncryptionKey); err != nil {
 		return "", err
 	}
 
 	return token, nil
-
 }
