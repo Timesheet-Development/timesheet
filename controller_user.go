@@ -10,7 +10,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-//
+//createUser will decode the json data to user struct format. Using service variable calling service.go method
+//If there is any error while doing the above operations createUser function will raise an error.
 func createUser(w http.ResponseWriter, r *http.Request) {
 	var err error
 	userReq := &user.User{}
@@ -25,7 +26,6 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	}
 	res.SendResponse(w, r, res.OK, Id)
-
 }
 
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +58,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Str("loginName", user.LoginName).Msg("Unable to parse json to user struct")
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	}
+
 	jwtStr, err = userService.LoginUser(r.Context(), user)
 	if err != nil {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
@@ -69,7 +70,7 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,
 		}
 		http.SetCookie(w, &cookie)
+
 		res.SendResponse(w, r, res.OK, jwtStr)
 	}
-
 }

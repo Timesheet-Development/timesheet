@@ -2,6 +2,7 @@ package timesheets
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"timesheet/user"
 
@@ -29,12 +30,6 @@ func (s *service) CreateTimesheet(ctx context.Context, ts *Timesheet) (string, e
 	var loginName string
 	user := &user.User{}
 
-	/* check whether loginName is existing or not
-	if not throw error,
-	checking if the loginName is in db
-	ToDo: total hrs calculation, define status
-	*/
-
 	if ts.LoginName == "" {
 		err = errors.New("loginName is empty")
 		return "", err
@@ -55,6 +50,18 @@ func (s *service) CreateTimesheet(ctx context.Context, ts *Timesheet) (string, e
 
 	ts.LoginName = user.LoginName
 	ts.Placement = user.Department + " " + user.JobTitle
+	ts.Status = string(timesheetStatusSubmitted)
+
+	//Unmarshalling the week hrs json
+	wArr := []WeekHrs{}
+
+	if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
+		log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
+	}
+
+	for _, eachDayHrs := range wArr {
+		ts.TotalHours = eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+	}
 
 	if loginName, err = s.repo.InsertTimesheet(ctx, ts); err != nil {
 		log.Error().Err(err).Str("loginName", loginName).Msg("Error while calling repo in timesheet service")
