@@ -16,6 +16,8 @@ type Repository interface {
 	SelectTimesheetByLoginName(ctx context.Context, loginName string, month, year int) (bool, error)
 
 	UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
+
+	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*Timesheet, error)
 }
 
 type repository struct {
@@ -84,4 +86,10 @@ func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *
 	res = fmt.Sprintf("Updated Sucessfully with given criteria %s,%d,%d \n", loginName, month, year)
 	return res, nil
 
+}
+func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*Timesheet, error) {
+	var err error
+	ts := []*Timesheet{}
+	// selectQry := `select * from timesheets t where t.login_name = $1;`
+	return ts, err
 }

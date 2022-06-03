@@ -57,9 +57,15 @@ func updateTimesheet(w http.ResponseWriter, r *http.Request) {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	}
 	res.SendResponse(w, r, res.OK, response)
-
 }
-
 func getListofTimesheets(w http.ResponseWriter, r *http.Request) {
-
+	loginName := chi.URLParam(r, "loginName")
+	stms, err := timesheetService.GetListofTimesheets(r.Context(), loginName)
+	if err != nil {
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	} else if stms == nil {
+		res.SendResponse(w, r, res.RecordNotFound, nil)
+	} else {
+		res.SendResponse(w, r, res.OK, stms)
+	}
 }

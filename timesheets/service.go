@@ -15,6 +15,8 @@ type Service interface {
 	CreateTimesheet(ctx context.Context, ts *Timesheet) (string, error)
 
 	UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
+
+	GetListofTimesheets(ctx context.Context, loginName string) ([]*Timesheet, error)
 }
 
 type service struct {
@@ -123,4 +125,18 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 		}
 	}
 	return res, nil
+}
+func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]*Timesheet, error) {
+	var err error
+	ts := []*Timesheet{}
+
+	if loginName == "" {
+		err = errors.New("loginName is empty")
+		return nil, err
+	}
+	if ts, err = s.repo.SelectAllTimesheetByLoginName(ctx, loginName); err != nil {
+		log.Error().Err(err).Msgf("Error while fetching timesheet info by the given login Name %s", loginName)
+		return nil, err
+	}
+	return ts, nil
 }
