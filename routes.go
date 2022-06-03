@@ -34,7 +34,7 @@ func addTimesheetRoutes(r *chi.Mux) {
 	r.Route("/users", func(r chi.Router) {
 		//http://localhost:8085/users/timesheets
 		r.Post("/timesheets", createTimesheet)
-		//r.Get("/timesheets/{loginName}", getListofTimesheets)
+		r.Get("/timesheets/{loginName}", getListofTimesheets)
 		r.Put("/timesheets/{loginName}/{month}/{year}", updateTimesheet)
 		//r.Delete("/timesheets/{loginName}/{month}/{year}", DeleteTimesheet)
 	})
