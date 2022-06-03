@@ -13,6 +13,7 @@ import (
 
 type Service interface {
 	CreateTimesheet(ctx context.Context, ts *Timesheet) (string, error)
+
 	UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
 }
 
@@ -104,6 +105,17 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 	}
 
 	if isExisting {
+		//Unmarshalling the week hrs json
+		wArr := []WeekHrs{}
+
+		if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
+			log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
+		}
+
+		for _, eachDayHrs := range wArr {
+			ts.TotalHours = eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+		}
+
 		res, err = s.repo.UpdateTimesheetByGivenCriteria(ctx, ts, loginName, month, year)
 		if err != nil {
 			log.Error().Err(err).Msgf("update Timesheet is failed with given criteria %s,%d,%d ", loginName, month, year)

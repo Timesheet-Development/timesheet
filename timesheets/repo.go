@@ -51,7 +51,7 @@ func (repo *repository) SelectTimesheetByLoginName(ctx context.Context, loginNam
 	selectQry := `select count(*) from timesheets t
 	 where t.login_name = $1 and t."month" = $2 and t."year" = $3;`
 	if err = pgxscan.Get(
-		ctx, repo.db, count, selectQry, loginName, month, year,
+		ctx, repo.db, &count, selectQry, loginName, month, year,
 	); err != nil {
 		// Handle query or rows processing error.
 		if pgxscan.NotFound(err) {
@@ -69,6 +69,7 @@ func (repo *repository) SelectTimesheetByLoginName(ctx context.Context, loginNam
 }
 
 func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error) {
+
 	var err error
 	var res string
 	UpdateQry := `UPDATE public.timesheets
