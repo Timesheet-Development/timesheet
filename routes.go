@@ -22,19 +22,27 @@ func addRoutes(r *chi.Mux) {
 func addIAMRoutes(r *chi.Mux) {
 	r.Route("/iam", func(r chi.Router) {
 
+		//createUser is a POST handler which is used to create a user
 		r.Post("/users", createUser)
-
-		r.Put("/users/{loginName}", forgotPassword)
-
 		r.Post("/users/login", loginUser)
+		r.Put("/users/{loginName}", forgotPassword)
 
 	})
 }
 
 func addTimesheetRoutes(r *chi.Mux) {
+<<<<<<< HEAD
 	r.Route("/timesheets", func(r chi.Router) {
 
 		r.Get("/{loginName}/{week}", getTimesheetsByWeek)
+=======
+	r.Route("/users", func(r chi.Router) {
+		//http://localhost:8085/users/timesheets
+		r.Post("/timesheets", createTimesheet)
+		r.Get("/timesheets/{loginName}", getListofTimesheets)
+		r.Put("/timesheets/{loginName}/{month}/{year}", updateTimesheet)
+		//r.Delete("/timesheets/{loginName}/{month}/{year}", DeleteTimesheet)
+>>>>>>> 502f2eadd55a453006fc51782aa660416103b581
 	})
 }
 

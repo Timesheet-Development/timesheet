@@ -15,7 +15,7 @@ import (
 func main() {
 
 	fmt.Println("Main started")
-	//Load configuration
+	//Load configuration.
 	if err := initConfig(); err != nil {
 		log.Fatalf("Failed loading configuration. err=%s\n", err.Error())
 	}
@@ -48,7 +48,7 @@ func main() {
 	//Add custom routes
 	addRoutes(r)
 
-	//Print all routes
+	//Print all routes.
 	printRoutes(r)
 
 	//Initialize various dependent services or Fail if the resources are not bound

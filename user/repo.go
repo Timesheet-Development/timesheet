@@ -14,6 +14,8 @@ import (
 type Repository interface {
 	SelectUserByLoginName(ctx context.Context, loginName string) (*User, error)
 
+	//InsertUser is using the db variable contacting the database to create a new user.
+	//If there is any error in the flow it will return the error
 	InsertUser(ctx context.Context, user *User) (*uuid.UUID, error)
 
 	UpdatePassword(ctx context.Context, psswd []byte, loginName string) (string, error)
@@ -45,8 +47,9 @@ func (repo *repository) SelectUserByLoginName(ctx context.Context, loginName str
 	return user, nil
 }
 
+//InsertUser is using the db variable contacting the database to create a new user.
+//If there is any error in the flow it will return the error
 func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID, error) {
-	tx, _ := repo.db.Begin(ctx)
 	log.Println("Insert user into DB")
 
 	insertqry := `INSERT INTO users (id, login_name, "password", "name", address, department, 
@@ -57,27 +60,13 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 
 	var tag pgconn.CommandTag
 	var err error
-	if tag, err = tx.Exec(ctx, insertqry, user.Id, user.LoginName, user.Password,
+	if tag, err = repo.db.Exec(ctx, insertqry, user.Id, user.LoginName, user.Password,
 		user.Name, user.Address, user.Department,
 		user.SocailSecurityNumber, user.DOB, user.City, user.State, user.JobTitle,
 		user.IsPermanent, user.Gender, user.Passport, user.ReportingManager); err != nil {
-		if err != nil {
-			tx.Rollback(ctx)
-			return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
-		}
-	}
-	tx.Commit(ctx)
-	//Communicating with database to get user id .
-	if err := pgxscan.Get(
-		ctx, repo.db, user, "select id from users where login_name=$1", user.LoginName,
-	); err != nil {
-		// Handle query or rows processing error.
-		if pgxscan.NotFound(err) {
-			//No error, but no user either
-			return nil, nil
-		}
 		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
 	}
+
 	log.Printf("userID[%v]\n", user.Id)
 
 	log.Printf("Rows affectd [%d]\n", tag.RowsAffected())
