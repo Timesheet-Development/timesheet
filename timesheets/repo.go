@@ -81,7 +81,7 @@ func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *
 		return "", err
 	}
 
-	res = fmt.Sprintf("Updated Sucessfully with given criteria %s,%d,%d \n", loginName, month, year)
+	res = fmt.Sprintf("Updated Sucessfully with given criteria %s,%d,%d", loginName, month, year)
 	return res, nil
 
 }
