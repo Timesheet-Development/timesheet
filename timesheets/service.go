@@ -16,7 +16,7 @@ type Service interface {
 
 	UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
 
-	GetListofTimesheets(ctx context.Context, loginName string) ([]*Timesheet, error)
+	GetListofTimesheets(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
 }
 
 type service struct {
@@ -126,9 +126,9 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 	}
 	return res, nil
 }
-func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]*Timesheet, error) {
+func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]*GetAllTimesheets, error) {
 	var err error
-	ts := []*Timesheet{}
+	ts := []*GetAllTimesheets{}
 
 	if loginName == "" {
 		err = errors.New("loginName is empty")
