@@ -58,8 +58,10 @@ func updateTimesheet(w http.ResponseWriter, r *http.Request) {
 	}
 	res.SendResponse(w, r, res.OK, response)
 }
+
 func getListofTimesheets(w http.ResponseWriter, r *http.Request) {
 	loginName := chi.URLParam(r, "loginName")
+
 	stms, err := timesheetService.GetListofTimesheets(r.Context(), loginName)
 	if err != nil {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
