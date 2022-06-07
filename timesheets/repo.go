@@ -6,6 +6,7 @@ import (
 	"timesheet/commons/res"
 
 	"github.com/georgysavva/scany/pgxscan"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/rs/zerolog/log"
 )
@@ -17,7 +18,9 @@ type Repository interface {
 
 	UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
 
-	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*Timesheet, error)
+	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
+
+	SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error)
 }
 
 type repository struct {
@@ -87,9 +90,53 @@ func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *
 	return res, nil
 
 }
-func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*Timesheet, error) {
+func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error) {
 	var err error
-	ts := []*Timesheet{}
-	// selectQry := `select * from timesheets t where t.login_name = $1;`
-	return ts, err
+	var rows pgx.Rows
+	tsArr := []*GetAllTimesheets{}
+
+	selectQry := `select login_name,placement,info,"month","year",total_hours,status,week_hours_info,week_day_info from timesheets t 
+				  where t.login_name = $1;`
+
+	rows, err = repo.db.Query(ctx, selectQry, loginName)
+
+	if err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Error while fetching the timesheet data")
+		return nil, err
+	}
+	for rows.Next() {
+		ts := &GetAllTimesheets{}
+		err = rows.Scan(&ts.LoginName, &ts.Placement, &ts.Info, &ts.Month, &ts.Year, &ts.TotalHours,
+			&ts.Status, &ts.WeekHrs, &ts.WeekDay)
+		if err != nil {
+			log.Error().Err(err).Str("loginName", loginName).Msg("Error while scaning each field from the timesheet")
+			return nil, err
+		}
+		tsArr = append(tsArr, ts)
+	}
+	log.Info().Str("loginName", loginName).Msg("Successfully return timesheet info")
+
+	return tsArr, nil
+}
+func (repo *repository) SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error) {
+	var err error
+	ts := &GetAllTimesheets{}
+
+	selectQry := `select login_name,placement,info,"month","year",total_hours,status,week_hours_info,week_day_info from timesheets t 
+				  where t.login_name = $1
+				  and t."month" = $2
+				  and t."year" = $3;`
+
+	if err = pgxscan.Get(
+		ctx, repo.db, ts, selectQry, loginName, month, year,
+	); err != nil {
+		// Handle query or rows processing error.
+		if pgxscan.NotFound(err) {
+			//return nil, &res.AppError{ResponseCode: UserDoesNotExist, Cause: err}
+			//No error, but no user either
+			return nil, nil
+		}
+		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
+	}
+	return nil, nil
 }

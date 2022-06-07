@@ -31,18 +31,16 @@ func addIAMRoutes(r *chi.Mux) {
 }
 
 func addTimesheetRoutes(r *chi.Mux) {
-<<<<<<< HEAD
-	r.Route("/timesheets", func(r chi.Router) {
-
-		r.Get("/{loginName}/{week}", getTimesheetsByWeek)
-=======
 	r.Route("/users", func(r chi.Router) {
 		//http://localhost:8085/users/timesheets
 		r.Post("/timesheets", createTimesheet)
+
 		r.Get("/timesheets/{loginName}", getListofTimesheets)
+
+		r.Get("/timesheets/{loginName}/{week}/{month}/{year}", getTimesheetsByWeek)
+
 		r.Put("/timesheets/{loginName}/{month}/{year}", updateTimesheet)
 		//r.Delete("/timesheets/{loginName}/{month}/{year}", DeleteTimesheet)
->>>>>>> 502f2eadd55a453006fc51782aa660416103b581
 	})
 }
 
