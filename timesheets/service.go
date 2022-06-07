@@ -17,6 +17,8 @@ type Service interface {
 	UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
 
 	GetListofTimesheets(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
+
+	GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error)
 }
 
 type service struct {
@@ -136,6 +138,37 @@ func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]
 	}
 	if ts, err = s.repo.SelectAllTimesheetByLoginName(ctx, loginName); err != nil {
 		log.Error().Err(err).Msgf("Error while fetching timesheet info by the given login Name %s", loginName)
+		return nil, err
+	}
+	return ts, nil
+}
+
+func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error) {
+	var err error
+	ts := &GetAllTimesheets{}
+
+	if loginName == "" {
+		err = errors.New("loginName is empty")
+		return nil, err
+	}
+
+	if week == 0 {
+		err = errors.New("invalid week")
+		return nil, err
+	}
+
+	if month == 0 {
+		err = errors.New("invalid month")
+		return nil, err
+	}
+
+	if year == 0 {
+		err = errors.New("invalid year")
+		return nil, err
+	}
+
+	if ts, err = s.repo.SelectTimesheetByWeek(ctx, loginName, week, month, year); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msgf("Error while fetching timeshhet infor by the given week %d", week)
 		return nil, err
 	}
 	return ts, nil

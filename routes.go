@@ -37,6 +37,8 @@ func addTimesheetRoutes(r *chi.Mux) {
 
 		r.Get("/timesheets/{loginName}", getListofTimesheets)
 
+		r.Get("/timesheets/{loginName}/{week}/{month}/{year}", getTimesheetsByWeek)
+
 		r.Put("/timesheets/{loginName}/{month}/{year}", updateTimesheet)
 		//r.Delete("/timesheets/{loginName}/{month}/{year}", DeleteTimesheet)
 	})

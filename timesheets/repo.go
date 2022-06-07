@@ -19,6 +19,8 @@ type Repository interface {
 	UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
 
 	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
+
+	SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error)
 }
 
 type repository struct {
@@ -115,4 +117,26 @@ func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, login
 	log.Info().Str("loginName", loginName).Msg("Successfully return timesheet info")
 
 	return tsArr, nil
+}
+func (repo *repository) SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error) {
+	var err error
+	ts := &GetAllTimesheets{}
+
+	selectQry := `select login_name,placement,info,"month","year",total_hours,status,week_hours_info,week_day_info from timesheets t 
+				  where t.login_name = $1
+				  and t."month" = $2
+				  and t."year" = $3;`
+
+	if err = pgxscan.Get(
+		ctx, repo.db, ts, selectQry, loginName, month, year,
+	); err != nil {
+		// Handle query or rows processing error.
+		if pgxscan.NotFound(err) {
+			//return nil, &res.AppError{ResponseCode: UserDoesNotExist, Cause: err}
+			//No error, but no user either
+			return nil, nil
+		}
+		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
+	}
+	return nil, nil
 }
