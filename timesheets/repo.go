@@ -86,10 +86,11 @@ func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *
 		return "", err
 	}
 
-	res = fmt.Sprintf("Updated Sucessfully with given criteria %s,%d,%d \n", loginName, month, year)
+	res = fmt.Sprintf("Updated Sucessfully with given criteria %s,%d,%d", loginName, month, year)
 	return res, nil
 
 }
+
 func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error) {
 	var err error
 	var rows pgx.Rows
@@ -99,11 +100,13 @@ func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, login
 				  where t.login_name = $1;`
 
 	rows, err = repo.db.Query(ctx, selectQry, loginName)
-
 	if err != nil {
 		log.Error().Err(err).Str("loginName", loginName).Msg("Error while fetching the timesheet data")
 		return nil, err
 	}
+
+	defer rows.Close()
+
 	for rows.Next() {
 		ts := &GetAllTimesheets{}
 		err = rows.Scan(&ts.LoginName, &ts.Placement, &ts.Info, &ts.Month, &ts.Year, &ts.TotalHours,
@@ -112,6 +115,7 @@ func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, login
 			log.Error().Err(err).Str("loginName", loginName).Msg("Error while scaning each field from the timesheet")
 			return nil, err
 		}
+
 		tsArr = append(tsArr, ts)
 	}
 	log.Info().Str("loginName", loginName).Msg("Successfully return timesheet info")

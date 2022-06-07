@@ -128,6 +128,7 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 	}
 	return res, nil
 }
+
 func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]*GetAllTimesheets, error) {
 	var err error
 	ts := []*GetAllTimesheets{}

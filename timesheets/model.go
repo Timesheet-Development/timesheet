@@ -21,6 +21,7 @@ type Timesheet struct {
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 }
+
 type GetAllTimesheets struct {
 	LoginName  string
 	Status     string
