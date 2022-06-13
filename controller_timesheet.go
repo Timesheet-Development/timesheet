@@ -63,6 +63,7 @@ func getListofTimesheets(w http.ResponseWriter, r *http.Request) {
 	loginName := chi.URLParam(r, "loginName")
 
 	stms, err := timesheetService.GetListofTimesheets(r.Context(), loginName)
+
 	if err != nil {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	} else if stms == nil {
@@ -96,7 +97,7 @@ func getTimesheetsByWeek(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Msg("error while converting year datatype string to int")
 	}
 
-	var timesheet *timesheets.GetAllTimesheets
+	var timesheet *timesheets.GetTimesheet
 	timesheet, err = timesheetService.GetTimesheetsByWeek(r.Context(), loginName, weekInt, monthInt, yearInt)
 	if err != nil {
 		log.Error().Err(err).Msg("error while calling GetTimesshetsByWeek")
@@ -109,10 +110,11 @@ func getTimesheetsByWeek(w http.ResponseWriter, r *http.Request) {
 }
 func updateNotes(w http.ResponseWriter, r *http.Request) {
 	var err error
+	var result string
 	loginName := chi.URLParam(r, "loginName")
 	month := chi.URLParam(r, "month")
 	year := chi.URLParam(r, "year")
-	info := chi.URLParam(r, "info")
+
 	var mnth, yr int
 
 	mnth, err = strconv.Atoi(month)
@@ -123,4 +125,65 @@ func updateNotes(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Err(err).Msg("year conversion of string to int is failed")
 	}
+	updNotes := &timesheets.AddorUpdateNotes{}
+	if err = json.NewDecoder(r.Body).Decode(updNotes); err != nil {
+		log.Error().Err(err).Str("loginname", updNotes.LoginName).Msg("Unable to parse Notes json to struct")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+
+	updNotes.LoginName = loginName
+	updNotes.Month = mnth
+	updNotes.Year = yr
+	result, err = timesheetService.UpdateNotes(r.Context(), updNotes)
+	if err != nil {
+		log.Error().Err(err).Msg("error msg")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+	res.SendResponse(w, r, res.OK, result)
+
+}
+
+func deleteTimesheet(w http.ResponseWriter, r *http.Request) {
+	var err error
+	var monthInt, yearInt int
+	var response string
+
+	loginName := chi.URLParam(r, "loginName")
+
+	month := chi.URLParam(r, "month")
+	monthInt, err = strconv.Atoi(month)
+	if err != nil {
+		log.Error().Err(err).Msg("error while converting month datatype string to int")
+	}
+
+	year := chi.URLParam(r, "year")
+	yearInt, err = strconv.Atoi(year)
+	if err != nil {
+		log.Error().Err(err).Msg("error while converting year datatype string to int")
+	}
+
+	if response, err = timesheetService.DeleteTimesheet(r.Context(), loginName, monthInt, yearInt); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Error while deleting timesheet record")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+	res.SendResponse(w, r, res.OK, &response)
+}
+
+func addorUpdateNotes(w http.ResponseWriter, r *http.Request) {
+	var err error
+	notes := &timesheets.AddorUpdateNotes{}
+	var response string
+
+	if err = json.NewDecoder(r.Body).Decode(notes); err != nil {
+		log.Error().Err(err).Str("loginname", notes.LoginName).Msg("Unable to parse Notes json to struct")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+
+	response, err = timesheetService.AddorUpdatenotes(r.Context(), notes)
+	if err != nil {
+		log.Error().Err(err).Msg("error msg")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+	res.SendResponse(w, r, res.OK, response)
+
 }

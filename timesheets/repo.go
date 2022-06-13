@@ -6,6 +6,7 @@ import (
 	"timesheet/commons/res"
 
 	"github.com/georgysavva/scany/pgxscan"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -21,6 +22,14 @@ type Repository interface {
 	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
 
 	SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error)
+
+	DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error)
+
+	SelectTimesheetUUID(ctx context.Context, loginName string, month, year int) (string, error)
+
+	UpsertTimesheetNotes(ctx context.Context, notes *AddorUpdateNotes, uuids string) (string, error)
+
+	UpdateNotes(ctx context.Context, updnotes *AddorUpdateNotes) (string, error)
 }
 
 type repository struct {
@@ -122,6 +131,7 @@ func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, login
 
 	return tsArr, nil
 }
+
 func (repo *repository) SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error) {
 	var err error
 	ts := &GetAllTimesheets{}
@@ -142,5 +152,70 @@ func (repo *repository) SelectTimesheetByWeek(ctx context.Context, loginName str
 		}
 		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
 	}
-	return nil, nil
+
+	return ts, nil
+}
+
+func (repo *repository) DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error) {
+	var err error
+	var response string
+
+	deletQry := `delete from timesheets t
+				where t.login_name = $1
+				and t.month = $2
+				and t.year = $3`
+	if _, err = repo.db.Exec(ctx, deletQry, loginName, month, year); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Error while deleting the data")
+		return "", err
+	}
+	response = fmt.Sprintf("Successfully delete the record for the given criteria %s %d %d", loginName, month, year)
+
+	return response, nil
+}
+
+func (repo *repository) SelectTimesheetUUID(ctx context.Context, loginName string, month, year int) (string, error) {
+	var err error
+	var uuid string
+	selectQry := `select id from timesheets where login_name = $1 and month = $2 and year = $3;`
+
+	err = repo.db.QueryRow(ctx, selectQry, loginName, month, year).Scan(&uuid)
+	if err != nil {
+		return "", nil
+	}
+
+	log.Info().Msgf("UUID %s", uuid)
+	return uuid, nil
+}
+
+func (repo *repository) UpsertTimesheetNotes(ctx context.Context, notes *AddorUpdateNotes, uuids string) (string, error) {
+
+	var err error
+	var res string
+
+	if uuids == "" {
+		uuids = uuid.New().String()
+	}
+
+	upsertQry := `insert into timesheets(id,login_name,month,year,info) values($1,$2,$3,$4,$5)
+				 on conflict(id,month,year)
+				 do update set info = excluded.info`
+
+	if _, err = repo.db.Exec(ctx, upsertQry, uuids, notes.LoginName, notes.Month, notes.Year, notes.Info); err != nil {
+		return "", err
+	}
+
+	res = "Added notes successfully"
+	return res, nil
+}
+func (repo *repository) UpdateNotes(ctx context.Context, updnotes *AddorUpdateNotes) (string, error) {
+	var err error
+	var result string
+	UpdateQry := `update timesheets set info=$1 
+				where login_name=$2 and month=$3 and year=$4`
+	if _, err = repo.db.Exec(ctx, UpdateQry, updnotes.Info, updnotes.LoginName, updnotes.Month, updnotes.Year); err != nil {
+		return "", err
+	}
+
+	result = "Updated notes successfully"
+	return result, nil
 }

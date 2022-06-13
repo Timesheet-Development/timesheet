@@ -3,6 +3,7 @@ package timesheets
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"timesheet/user"
 
@@ -18,7 +19,13 @@ type Service interface {
 
 	GetListofTimesheets(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
 
-	GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error)
+	GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetTimesheet, error)
+
+	DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error)
+
+	AddorUpdatenotes(ctx context.Context, notes *AddorUpdateNotes) (string, error)
+
+	UpdateNotes(ctx context.Context, updnotes *AddorUpdateNotes) (string, error)
 }
 
 type service struct {
@@ -144,7 +151,7 @@ func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]
 	return ts, nil
 }
 
-func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error) {
+func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetTimesheet, error) {
 	var err error
 	ts := &GetAllTimesheets{}
 
@@ -172,5 +179,111 @@ func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, wee
 		log.Error().Err(err).Str("loginName", loginName).Msgf("Error while fetching timeshhet infor by the given week %d", week)
 		return nil, err
 	}
-	return ts, nil
+
+	log.Info().Msgf("json data from db %v", ts.WeekHrs)
+
+	//Step1 : Unmarshal the week hrs info data
+
+	wArr := []WeekHrs{}
+
+	if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
+		log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
+	}
+
+	log.Info().Msgf("un marshalled data into golang struct %v", wArr)
+
+	w := WeekHrs{}
+
+	for _, wI := range wArr {
+		if wI.WeekInfo == week {
+			w.WeekInfo = wI.WeekInfo
+			w.Day1 = wI.Day1
+			w.Day2 = wI.Day2
+			w.Day3 = wI.Day3
+			w.Day4 = wI.Day4
+			w.Day5 = wI.Day5
+		}
+	}
+
+	timesheet := &GetTimesheet{
+		LoginName:  ts.LoginName,
+		Status:     ts.Status,
+		Placement:  ts.Placement,
+		Info:       ts.Info,
+		TotalHours: ts.TotalHours,
+		Month:      ts.Month,
+		Year:       ts.Year,
+		WeekData:   w,
+	}
+
+	return timesheet, nil
+}
+
+func (s *service) DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error) {
+	var err error
+	var response string
+	var isExisting bool
+
+	if loginName == "" {
+		err = errors.New("Login name is invalid")
+		return "", err
+	}
+
+	isExisting, err = s.repo.SelectTimesheetByLoginName(ctx, loginName, month, year)
+	if err != nil {
+		log.Error().Err(err).Msgf("Error while fetching Timesheet with given LoginName")
+		return "", err
+	}
+	if !isExisting {
+
+		response = fmt.Sprintf("We don't have data with the given login Name %s", loginName)
+		return response, nil
+	}
+
+	if isExisting {
+		response, err = s.repo.DeleteTimesheet(ctx, loginName, month, year)
+		if err != nil {
+			log.Error().Err(err).Str("loginname", loginName).Msg("Error while calling repo DeleteTimesheet")
+			return "", err
+		}
+	}
+	return response, nil
+}
+
+func (s *service) AddorUpdatenotes(ctx context.Context, notes *AddorUpdateNotes) (string, error) {
+	var err error
+	var res string
+
+	var uuid string
+
+	if notes.LoginName == "" && notes.Month == 0 && notes.Year == 0 {
+		err = errors.New("Criteria is not valid")
+		return "", err
+	}
+
+	uuid, err = s.repo.SelectTimesheetUUID(ctx, notes.LoginName, notes.Month, notes.Year)
+	if err != nil {
+		return "", err
+	}
+
+	res, err = s.repo.UpsertTimesheetNotes(ctx, notes, uuid)
+	if err != nil {
+		return "", err
+	}
+
+	return res, nil
+}
+func (s *service) UpdateNotes(ctx context.Context, updnotes *AddorUpdateNotes) (string, error) {
+	var err error
+	var result string
+
+	if updnotes.LoginName == "" && updnotes.Month == 0 && updnotes.Year == 0 {
+		err = errors.New("Criteria is not valid")
+		return "", err
+	}
+	result, err = s.repo.UpdateNotes(ctx, updnotes)
+	if err != nil {
+		return "", err
+	}
+	return result, nil
 }
