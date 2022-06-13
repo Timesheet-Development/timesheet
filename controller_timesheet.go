@@ -107,3 +107,20 @@ func getTimesheetsByWeek(w http.ResponseWriter, r *http.Request) {
 		res.SendResponse(w, r, res.OK, timesheet)
 	}
 }
+func updateNotes(w http.ResponseWriter, r *http.Request) {
+	var err error
+	loginName := chi.URLParam(r, "loginName")
+	month := chi.URLParam(r, "month")
+	year := chi.URLParam(r, "year")
+	info := chi.URLParam(r, "info")
+	var mnth, yr int
+
+	mnth, err = strconv.Atoi(month)
+	if err != nil {
+		log.Error().Err(err).Msg("month conversion of string to int is failed")
+	}
+	yr, err = strconv.Atoi(year)
+	if err != nil {
+		log.Error().Err(err).Msg("year conversion of string to int is failed")
+	}
+}

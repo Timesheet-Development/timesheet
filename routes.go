@@ -41,6 +41,8 @@ func addTimesheetRoutes(r *chi.Mux) {
 
 		r.Put("/timesheets/{loginName}/{month}/{year}", updateTimesheet)
 		//r.Delete("/timesheets/{loginName}/{month}/{year}", DeleteTimesheet)
+
+		r.Put("/timesheets/updnotes/{loginName}/{month}/{year}", updateNotes)
 	})
 }
 
