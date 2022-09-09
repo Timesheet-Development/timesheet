@@ -47,7 +47,7 @@ func NewService(repo Repository) Service {
 	return &service{repo: repo}
 }
 
-//CreateUser doing all business activities and checking if user existing or not. If yes contacting repo.go to
+// CreateUser doing all business activities and checking if user existing or not. If yes contacting repo.go to
 // initialize the functionality.
 func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error) {
 	log.Info().Msg("User service initialized")
@@ -109,6 +109,7 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 func (svc *service) IsUserAlreadyExisting(ctx context.Context, loginName string) (bool, error) {
 	//Transform fields
 	loginName = strings.ToUpper(loginName)
+
 	log.Info().Msgf("Checking if user [%s] exists", loginName)
 
 	var user *User

@@ -2,15 +2,19 @@
 
 # Keywords
 Keywords: break , default , func , interface , select , case , defer , go , map , struct , chan , else , goto , package , switch , const , fallthrough , if , range , type , continue , for , import , return , var, else if .
+
 # Data Types:
-Number ->
+Number -> 
 Integers:  int8, int16, int32 and int64, uint8, uint16, uint32 and uint64
 Float: float32 and float64
 Complex: complex64 and complex128
+rune - same as int32 and byte - same as uint8
+
+int,uint, uintptr
+
 Strings
 Boolean - false & true
-rune - same as int32 and byte - same as uint8
-int,uint, uintptr
+
 
 # Formatting by golang
 ------------------------------

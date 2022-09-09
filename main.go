@@ -15,6 +15,7 @@ import (
 func main() {
 
 	fmt.Println("Main started")
+
 	//Load configuration.
 	if err := initConfig(); err != nil {
 		log.Fatalf("Failed loading configuration. err=%s\n", err.Error())
