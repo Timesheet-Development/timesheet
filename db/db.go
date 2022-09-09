@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
+// Connect is function which is used to ensure the connection is successful with the DB
 func Connect(url string) (*pgx.Conn, error) {
 	return pgx.Connect(context.Background(), url)
 }

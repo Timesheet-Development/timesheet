@@ -25,6 +25,7 @@ type repository struct {
 	db *pgxpool.Pool
 }
 
+// NewRepository is a function which holds Database variable. Which is used to perform different actions on DB.
 func NewRepository(db *pgxpool.Pool) Repository {
 	return &repository{db: db}
 }
@@ -32,6 +33,7 @@ func NewRepository(db *pgxpool.Pool) Repository {
 func (repo *repository) SelectUserByLoginName(ctx context.Context, loginName string) (*User, error) {
 
 	user := &User{}
+
 	if err := pgxscan.Get(
 		ctx, repo.db, user, "SELECT * FROM users where login_name=$1", loginName,
 	); err != nil {
@@ -47,8 +49,8 @@ func (repo *repository) SelectUserByLoginName(ctx context.Context, loginName str
 	return user, nil
 }
 
-//InsertUser is using the db variable contacting the database to create a new user.
-//If there is any error in the flow it will return the error
+// InsertUser is using the db variable contacting the database to create a new user.
+// If there is any error in the flow it will return the error
 func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID, error) {
 	log.Println("Insert user into DB")
 

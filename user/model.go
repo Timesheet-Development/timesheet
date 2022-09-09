@@ -6,7 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-/*<<<<---User--->>>>
+/*
+<<<<---User--->>>>
 Contains fields which discuss about a employee or a person in a organization.
 */
 type User struct {
@@ -15,7 +16,7 @@ type User struct {
 	LoginName            string    `db:"login_name"`
 	Password             string    `db:"password"`
 	Department           string    `db:"department"`
-	SocailSecurityNumber int       `db:"security_no"`
+	SocailSecurityNumber string    `db:"security_no"`
 	DOB                  time.Time `db:"dob"`
 	City                 string    `db:"city"`
 	State                string    `db:"state"`

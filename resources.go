@@ -11,8 +11,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-//commandDB variable
-//database/sql, sqlx, pgx,
+// commandDB variable
 var commandDB *pgxpool.Pool
 
 func initResourcesOrFail() {
@@ -40,7 +39,7 @@ func initCommandDatabase() bool {
 
 	commandDB = pool
 
-	log.Printf("Command database initialized")
+	log.Println("Command database initialized")
 	return true
 }
 

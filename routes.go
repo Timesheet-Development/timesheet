@@ -24,7 +24,9 @@ func addIAMRoutes(r *chi.Mux) {
 
 		//createUser is a POST handler which is used to create a user
 		r.Post("/users", createUser)
+
 		r.Post("/users/login", loginUser)
+
 		r.Put("/users/{loginName}", forgotPassword)
 
 	})
