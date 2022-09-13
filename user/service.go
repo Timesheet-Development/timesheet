@@ -89,7 +89,15 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 		log.Error().Err(err).Msgf("Error occurred while hashing password for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
 		return nil, err
 	}
+
+	socailSecurityNoHash, err := bcrypt.GenerateFromPassword([]byte(iam.SocailSecurityNumber), bcrypt.DefaultCost)
+	if err != nil {
+		log.Error().Err(err).Msgf("Error occurred while hashing Social Security Number for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
+		return nil, err
+	}
+
 	iam.Password = string(passwordHash)
+	iam.SocailSecurityNumber = string(socailSecurityNoHash)
 
 	if err = bcrypt.CompareHashAndPassword(passwordHash, []byte(iam.Password)); err != nil {
 		log.Error().Err(err).Msg("Password Hash generated does not match the password! ")
