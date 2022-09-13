@@ -92,7 +92,7 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 	iam.Password = string(passwordHash)
 
 	if err = bcrypt.CompareHashAndPassword(passwordHash, []byte(iam.Password)); err != nil {
-		log.Error().Err(err).Msg("Password Hash generated does not match the password! ")
+		log.Error().Err(err).Msg("Password Hash generated does not match the password ")
 	}
 
 	ID := &iam.Id
