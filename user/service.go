@@ -2,11 +2,11 @@ package user
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 	"timesheet/commons/res"
-	"timesheet/commons/validate"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
@@ -27,6 +27,8 @@ type Service interface {
 	ForgotPassword(ctx context.Context, loginName string, updPswd *UpdatePassword) (string, error)
 
 	LoginUser(ctx context.Context, user *User) (string, error)
+
+	ModifyUser(ctx context.Context, loginName string, user *User) (string, error)
 }
 
 var UserAlreadyExists = &res.ResponseCode{Code: "UserAlreadyExists", Message: "User already exists", HttpStatus: http.StatusBadRequest}
@@ -60,13 +62,72 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 	//Validate fields
 	log.Info().Msgf("Validating user creation request for [%s]\n", iam.LoginName)
 
-	ve := validate.New().
-		IsRequired("LoginName", iam.LoginName).
-		IsRequired("Password", iam.Password).
-		IsSizeInRange("Password", iam.Password, 3, 20)
-	if ve.HasErrors() {
-		return nil, ve
+	if iam.LoginName == "" {
+		err = errors.New("login name is given empty. it's a mandatory field")
+		return nil, err
 	}
+
+	if iam.Password == "" {
+		err = errors.New("password is given empty. it's a mandatory field")
+		return nil, err
+	}
+
+	if iam.Department == "" {
+		err = errors.New("department is given empty. it's a mandatory field")
+		return nil, err
+	}
+
+	if iam.WorkMail == "" {
+		err = errors.New("work mail is given empty. it's a mandatory field")
+		return nil, err
+	}
+
+	// if iam.Password != "" {
+	// 	log.Info().Msg("Verifying password")
+	// 	var (
+	// 		isMin   bool
+	// 		special bool
+	// 		number  bool
+	// 		upper   bool
+	// 		lower   bool
+	// 	)
+
+	// 	for _, eachCharacter := range iam.Password {
+
+	// 		// Optimize perf if all become true before reaching the end
+	// 		if special && number && upper && lower && isMin {
+	// 			break
+	// 		}
+
+	// 		// else go on switching
+	// 		switch {
+	// 		case unicode.IsUpper(eachCharacter):
+	// 			upper = true
+	// 		case unicode.IsLower(eachCharacter):
+	// 			lower = true
+	// 		case unicode.IsNumber(eachCharacter):
+	// 			number = true
+	// 		case unicode.IsPunct(eachCharacter) || unicode.IsSymbol(eachCharacter):
+	// 			special = true
+	// 		}
+
+	// 	}
+
+	// 	log.Info().Msg("Switch block is completed")
+
+	// 	if !(special && upper && lower && number) {
+
+	// 		log.Info().Msg("Entered into false condition")
+
+	// 		log.Error().Err(err).Msgf("Entered into false condition %v", err.Error())
+
+	// 		// err = errors.New("set a confidential password given is not meeting the requirements.")
+	// 		// return nil, err
+	// 	}
+
+	// 	log.Info().Msg("Verifying password is done")
+
+	// }
 
 	log.Info().Msgf("Checking if user details [%v] exists", iam)
 
@@ -97,6 +158,7 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 	}
 
 	iam.Password = string(passwordHash)
+
 	iam.SocailSecurityNumber = string(socailSecurityNoHash)
 
 	if err = bcrypt.CompareHashAndPassword(passwordHash, []byte(iam.Password)); err != nil {
@@ -181,6 +243,8 @@ func (s *service) ForgotPassword(ctx context.Context, loginName string, updPswd 
 
 		log.Info().Msg("Contacting repo to update password")
 
+		loginName = user.LoginName
+
 		if loginName, err = s.repo.UpdatePassword(ctx, passwordHash, loginName); err != nil {
 			log.Error().Err(err).Msg("Error while updating new password")
 			return "", err
@@ -215,12 +279,16 @@ func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
 	var err error
 	//transform loginname
 	loginName := strings.ToUpper(user.LoginName)
+
 	if loginName == "" {
 		log.Error().Err(err).Msg("Invalid LoginName")
 		return "", err
 	}
+
 	log.Info().Msgf("Logging in user %s \n", loginName)
+
 	getUser := &User{}
+
 	//Hitting to the db with the available login name.
 	if getUser, err = s.GetUser(ctx, loginName); err != nil {
 		log.Error().Err(err).Msgf("User doesnot Exist with given LoginName %s \n", loginName)
@@ -244,4 +312,30 @@ func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
 	}
 
 	return token, nil
+}
+
+func (s *service) ModifyUser(ctx context.Context, loginName string, user *User) (string, error) {
+	var err error
+
+	var isUserExists bool
+
+	var updateStr string
+
+	if isUserExists, err = s.IsUserAlreadyExisting(ctx, loginName); err != nil {
+		log.Error().Err(err).Msg("Error while checking user already exists")
+		return "", err
+	}
+
+	if isUserExists {
+
+		loginName = strings.ToUpper(loginName)
+
+		if updateStr, err = s.repo.UpdateUser(ctx, loginName, user); err != nil {
+			log.Error().Err(err).Msg("Error while performing update user")
+			return "", err
+		}
+
+	}
+
+	return updateStr, nil
 }

@@ -7,11 +7,12 @@ import (
 	"timesheet/user"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 	"github.com/rs/zerolog/log"
 )
 
-//createUser will decode the json data to user struct format. Using service variable calling service.go method
-//If there is any error while doing the above operations createUser function will raise an error.
+// createUser will decode the json data to user struct format. Using service variable calling service.go method
+// If there is any error while doing the above operations createUser function will raise an error.
 func createUser(w http.ResponseWriter, r *http.Request) {
 	var err error
 	userReq := &user.User{}
@@ -30,6 +31,7 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 
 func forgotPassword(w http.ResponseWriter, r *http.Request) {
 	var err error
+
 	loginName := chi.URLParam(r, "loginName")
 
 	updPswd := &user.UpdatePassword{}
@@ -63,14 +65,39 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	} else {
+		render.JSON(w, r, jwtStr)
+
 		cookie := http.Cookie{
 			Name:     "Timesheet",
 			Value:    jwtStr,
+			Path:     "/",
 			Secure:   true,
 			HttpOnly: true,
 		}
 		http.SetCookie(w, &cookie)
 
-		res.SendResponse(w, r, res.OK, jwtStr)
 	}
+}
+
+func modifyUser(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	user := &user.User{}
+
+	var updateStr, loginName string
+
+	loginName = chi.URLParam(r, "loginName")
+
+	if err = json.NewDecoder(r.Body).Decode(user); err != nil {
+		log.Error().Err(err).Str("loginName", user.LoginName).Msg("Unable to parse json to user struct")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+
+	updateStr, err = userService.ModifyUser(r.Context(), loginName, user)
+	if err != nil {
+		log.Error().Err(err).Str("loginName", user.LoginName).Msg("Error while calling modify user service method")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+
+	res.SendResponse(w, r, res.OK, updateStr)
 }
