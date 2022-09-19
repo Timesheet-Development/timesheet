@@ -9,7 +9,7 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "e:/go-workspace/src/timesheet/main.go",
+            "program": "f:/go-workspace/src/timesheet/main.go",
             "env": {},
             "args": ["${fileDirname}/run.bat"]
         }

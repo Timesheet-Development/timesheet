@@ -2,7 +2,9 @@ package user
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"time"
 	"timesheet/commons/res"
 
 	"github.com/georgysavva/scany/pgxscan"
@@ -19,6 +21,8 @@ type Repository interface {
 	InsertUser(ctx context.Context, user *User) (*uuid.UUID, error)
 
 	UpdatePassword(ctx context.Context, psswd []byte, loginName string) (string, error)
+
+	UpdateUser(ctx context.Context, loginName string, user *User) (string, error)
 }
 
 type repository struct {
@@ -55,8 +59,9 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 	log.Println("Insert user into DB")
 
 	insertqry := `INSERT INTO users (id, login_name, "password", "name", address, department, 
-	security_no, dob, city, state, job_title, is_perm, gender, passport, reporting_mngr) 
-	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15);
+	security_no, dob, city, state, job_title, is_perm, gender, passport, reporting_mngr, work_mail,
+	personal_mail,phone_number) 
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18);
 	`
 	user.Id = uuid.New()
 
@@ -65,7 +70,8 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 	if tag, err = repo.db.Exec(ctx, insertqry, user.Id, user.LoginName, user.Password,
 		user.Name, user.Address, user.Department,
 		user.SocailSecurityNumber, user.DOB, user.City, user.State, user.JobTitle,
-		user.IsPermanent, user.Gender, user.Passport, user.ReportingManager); err != nil {
+		user.IsPermanent, user.Gender, user.Passport, user.ReportingManager, user.WorkMail,
+		user.PersonalMail, user.PhoneNumber); err != nil {
 		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
 	}
 
@@ -78,12 +84,37 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 
 func (repo *repository) UpdatePassword(ctx context.Context, psswd []byte, loginName string) (string, error) {
 	var err error
-	updPswdQry := `update users set password=$1
-				  where login_name=$2`
+	updPswdQry := `update users set password=$2
+				  where login_name=$1`
 
-	if _, err = repo.db.Exec(ctx, updPswdQry, psswd, loginName); err != nil {
+	if _, err = repo.db.Exec(ctx, updPswdQry, loginName, psswd); err != nil {
 		log.Printf("Unable to perform update password. Error is [%v]\n", err)
 		return "", err
 	}
+
 	return loginName, nil
+}
+
+func (repo *repository) UpdateUser(ctx context.Context, loginName string, user *User) (string, error) {
+	var err error
+
+	var updateStr string
+
+	updateUserQuery := `UPDATE public.users
+	SET "name" = $1, dob = $2, city = $3, state = $4,
+	address = $5, job_title = $6, gender = $7, passport = $8, 
+	work_mail = $9, personal_mail = $10, phone_number = $11, updated_at = $12
+	WHERE login_name = $13;
+	`
+
+	if _, err = repo.db.Exec(ctx, updateUserQuery, user.Name, user.DOB, user.City, user.State,
+		user.Address, user.JobTitle, user.Gender, user.Passport, user.WorkMail,
+		user.PersonalMail, user.PhoneNumber, time.Now(), loginName); err != nil {
+		log.Printf("Error whil performing update user %v\n", err)
+		return "", err
+	}
+
+	updateStr = fmt.Sprintf("User details are updated successfully for the given loginName %s", loginName)
+
+	return updateStr, nil
 }

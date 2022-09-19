@@ -8,7 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-//addRoutes will have different routes  functions and calls those functions...
+// addRoutes will have different routes  functions and calls those functions...
 func addRoutes(r *chi.Mux) {
 	log.Println("Registering routes")
 	addIAMRoutes(r)
@@ -29,6 +29,9 @@ func addIAMRoutes(r *chi.Mux) {
 
 		r.Put("/users/{loginName}", forgotPassword)
 
+		r.Put("/users/modify/{loginName}", modifyUser)
+
+		r.Get("/users/{loginName}", getUser)
 	})
 }
 
