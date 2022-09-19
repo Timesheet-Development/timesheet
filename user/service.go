@@ -3,6 +3,7 @@ package user
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -81,53 +82,6 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 		err = errors.New("work mail is given empty. it's a mandatory field")
 		return nil, err
 	}
-
-	// if iam.Password != "" {
-	// 	log.Info().Msg("Verifying password")
-	// 	var (
-	// 		isMin   bool
-	// 		special bool
-	// 		number  bool
-	// 		upper   bool
-	// 		lower   bool
-	// 	)
-
-	// 	for _, eachCharacter := range iam.Password {
-
-	// 		// Optimize perf if all become true before reaching the end
-	// 		if special && number && upper && lower && isMin {
-	// 			break
-	// 		}
-
-	// 		// else go on switching
-	// 		switch {
-	// 		case unicode.IsUpper(eachCharacter):
-	// 			upper = true
-	// 		case unicode.IsLower(eachCharacter):
-	// 			lower = true
-	// 		case unicode.IsNumber(eachCharacter):
-	// 			number = true
-	// 		case unicode.IsPunct(eachCharacter) || unicode.IsSymbol(eachCharacter):
-	// 			special = true
-	// 		}
-
-	// 	}
-
-	// 	log.Info().Msg("Switch block is completed")
-
-	// 	if !(special && upper && lower && number) {
-
-	// 		log.Info().Msg("Entered into false condition")
-
-	// 		log.Error().Err(err).Msgf("Entered into false condition %v", err.Error())
-
-	// 		// err = errors.New("set a confidential password given is not meeting the requirements.")
-	// 		// return nil, err
-	// 	}
-
-	// 	log.Info().Msg("Verifying password is done")
-
-	// }
 
 	log.Info().Msgf("Checking if user details [%v] exists", iam)
 
@@ -335,6 +289,9 @@ func (s *service) ModifyUser(ctx context.Context, loginName string, user *User) 
 			return "", err
 		}
 
+	} else {
+		updateStr = fmt.Sprintf("User does not exists with the given login name %s", loginName)
+		return updateStr, nil
 	}
 
 	return updateStr, nil

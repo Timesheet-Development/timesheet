@@ -101,3 +101,14 @@ func modifyUser(w http.ResponseWriter, r *http.Request) {
 
 	res.SendResponse(w, r, res.OK, updateStr)
 }
+
+func getUser(w http.ResponseWriter, r *http.Request) {
+
+	//take loginname from the param.
+
+	//call the service method.
+
+	//Do error handling
+
+	//Return success response
+}

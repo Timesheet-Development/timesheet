@@ -31,6 +31,7 @@ func addIAMRoutes(r *chi.Mux) {
 
 		r.Put("/users/modify/{loginName}", modifyUser)
 
+		r.Get("/users/{loginName}", getUser)
 	})
 }
 
