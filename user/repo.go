@@ -10,11 +10,14 @@ import (
 	"github.com/georgysavva/scany/pgxscan"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
+	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 type Repository interface {
 	SelectUserByLoginName(ctx context.Context, loginName string) (*User, error)
+
+	SelectUsers(ctx context.Context) ([]*SelectUser, error)
 
 	//InsertUser is using the db variable contacting the database to create a new user.
 	//If there is any error in the flow it will return the error
@@ -117,4 +120,44 @@ func (repo *repository) UpdateUser(ctx context.Context, loginName string, user *
 	updateStr = fmt.Sprintf("User details are updated successfully for the given loginName %s", loginName)
 
 	return updateStr, nil
+}
+
+func (repo *repository) SelectUsers(ctx context.Context) ([]*SelectUser, error) {
+	users := []*SelectUser{}
+
+	var err error
+
+	var rows pgx.Rows
+
+	selectUsers := `select name,login_name , department ,security_no ,dob , city ,state ,
+	address ,job_title ,is_perm ,gender ,passport ,
+	reporting_mngr ,work_mail ,personal_mail ,phone_number 
+	from users order by created_at desc;`
+
+	rows, err = repo.db.Query(ctx, selectUsers)
+	if err != nil {
+		log.Println("Error while performing selectusers")
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+
+		user := &SelectUser{}
+
+		if err = rows.Scan(&user.Name, &user.LoginName, &user.Department, &user.SocailSecurityNumber,
+			&user.DOB, &user.City,
+			&user.State, &user.Address, &user.JobTitle, &user.IsPermanent, &user.Gender, &user.Passport,
+			&user.ReportingManager,
+			&user.WorkMail, &user.PersonalMail, &user.PhoneNumber); err != nil {
+
+			log.Printf("Error while scanning the data into user struct %v\n", err)
+			return nil, err
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }

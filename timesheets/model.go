@@ -55,12 +55,21 @@ const (
 )
 
 type WeekHrs struct {
-	WeekInfo int
+	WeekInfo int `json:"week_info"`
 	Day1     float64
 	Day2     float64
 	Day3     float64
 	Day4     float64
 	Day5     float64
+}
+
+type WeekDay struct {
+	WeekInfo int `json:"week_info"`
+	Day1     string
+	Day2     string
+	Day3     string
+	Day4     string
+	Day5     string
 }
 
 type AddorUpdateNotes struct {

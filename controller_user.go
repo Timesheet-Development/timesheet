@@ -102,21 +102,30 @@ func modifyUser(w http.ResponseWriter, r *http.Request) {
 	res.SendResponse(w, r, res.OK, updateStr)
 }
 
-func getUser(w http.ResponseWriter, r *http.Request) {
+func listUsers(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	//take loginname from the param.
 	loginName := chi.URLParam(r, "loginName")
+
+	users := []*user.SelectUser{}
+
 	user := &user.User{}
 
-	//call the service method.
-	if user, err = userService.GetUser(r.Context(), loginName); err != nil {
-		log.Error().Err(err).Str("loginName", user.LoginName).Msg("Error while getUse service method")
-		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	if loginName == "empty" {
+		if users, err = userService.GetUsers(r.Context()); err != nil {
+			log.Error().Err(err).Str("loginName", user.LoginName).Msg("Error while getUse service method")
+			res.SendError(w, r, err, config.Debug.PrintRootCause)
+		}
+	} else {
+		if user, err = userService.GetUser(r.Context(), loginName); err != nil {
+			log.Error().Err(err).Str("loginName", user.LoginName).Msg("Error while getUse service method")
+			res.SendError(w, r, err, config.Debug.PrintRootCause)
+		}
 	}
 
-	//Do error handlin
-	//Return success response
-
-	res.SendResponse(w, r, res.OK, user)
+	if user.Name != "" {
+		res.SendResponse(w, r, res.OK, user)
+	} else {
+		res.SendResponse(w, r, res.OK, users)
+	}
 }

@@ -21,6 +21,8 @@ type Service interface {
 
 	GetUser(ctx context.Context, loginName string) (*User, error)
 
+	GetUsers(ctx context.Context) ([]*SelectUser, error)
+
 	//CreateUser doing all business activities and checking if user existing or not. If yes contacting repo.go to
 	// initialize the functionality.
 	CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
@@ -295,4 +297,18 @@ func (s *service) ModifyUser(ctx context.Context, loginName string, user *User) 
 	}
 
 	return updateStr, nil
+}
+
+func (s *service) GetUsers(ctx context.Context) ([]*SelectUser, error) {
+	var err error
+
+	u := []*SelectUser{}
+
+	if u, err = s.repo.SelectUsers(ctx); err != nil {
+		log.Error().Err(err).Msg("Error while Retreiving all users")
+		return nil, err
+	}
+
+	return u, nil
+
 }

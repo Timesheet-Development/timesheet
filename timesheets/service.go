@@ -57,24 +57,35 @@ func (s *service) CreateTimesheet(ctx context.Context, ts *Timesheet) (string, e
 
 	log.Info().Str("loginName", user.LoginName).Msg("logging the timesheet info")
 
+	var sb strings.Builder
+	sb.WriteString(user.Department)
+	sb.WriteString(" ")
+	sb.WriteString(user.JobTitle)
+
 	ts.ID = uuid.New()
 
 	ts.LoginName = user.LoginName
-	ts.Placement = user.Department + " " + user.JobTitle
+	ts.Placement = sb.String()
 	ts.Status = string(timesheetStatusSubmitted)
 
 	//Unmarshalling the week hrs json
-	wArr := []WeekHrs{}
+	wArr := []*WeekHrs{}
 
 	if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
 		log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
 	}
 
-	for _, eachDayHrs := range wArr {
-		ts.TotalHours = eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+	//Unmarshalling week day json
+	wDayArr := []*WeekDay{}
+	if err = json.Unmarshal(ts.WeekDay, &wDayArr); err != nil {
+		log.Error().Err(err).Msg("Error while unmarshalling week day json")
 	}
 
-	if loginName, err = s.repo.InsertTimesheet(ctx, ts); err != nil {
+	for _, eachDayHrs := range wArr {
+		ts.TotalHours += eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+	}
+
+	if loginName, err = s.repo.InsertTimesheet(ctx, ts, wArr, wDayArr); err != nil {
 		log.Error().Err(err).Str("loginName", loginName).Msg("Error while calling repo in timesheet service")
 		return "", err
 	}
@@ -98,14 +109,16 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 	}
 
 	if month == 0 {
-		err = errors.New("loginName is empty")
+		err = errors.New("month cannot be zero")
 		return "", err
 	}
 
 	if year == 0 {
-		err = errors.New("loginName is empty")
+		err = errors.New("year cannot be zero")
 		return "", err
 	}
+
+	loginName = strings.ToUpper(loginName)
 
 	isExisting, err = s.repo.SelectTimesheetByLoginName(ctx, loginName, month, year)
 	if err != nil {
@@ -115,17 +128,17 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 
 	if isExisting {
 		//Unmarshalling the week hrs json
-		wArr := []WeekHrs{}
+		wArr := []*WeekHrs{}
 
 		if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
 			log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
 		}
 
 		for _, eachDayHrs := range wArr {
-			ts.TotalHours = eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+			ts.TotalHours += eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
 		}
 
-		res, err = s.repo.UpdateTimesheetByGivenCriteria(ctx, ts, loginName, month, year)
+		res, err = s.repo.UpdateTimesheetByGivenCriteria(ctx, ts, loginName, month, year, wArr)
 		if err != nil {
 			log.Error().Err(err).Msgf("update Timesheet is failed with given criteria %s,%d,%d ", loginName, month, year)
 			return "", err

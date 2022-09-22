@@ -3,6 +3,7 @@ package timesheets
 import (
 	"context"
 	"fmt"
+	"time"
 	"timesheet/commons/res"
 
 	"github.com/georgysavva/scany/pgxscan"
@@ -13,11 +14,11 @@ import (
 )
 
 type Repository interface {
-	InsertTimesheet(ctx context.Context, ts *Timesheet) (string, error)
+	InsertTimesheet(ctx context.Context, ts *Timesheet, wArr []*WeekHrs, wDayArr []*WeekDay) (string, error)
 
 	SelectTimesheetByLoginName(ctx context.Context, loginName string, month, year int) (bool, error)
 
-	UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error)
+	UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int, wArr []*WeekHrs) (string, error)
 
 	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
 
@@ -38,19 +39,52 @@ func NewRepository(db *pgxpool.Pool) Repository {
 	return &repository{db: db}
 }
 
-func (r *repository) InsertTimesheet(ctx context.Context, ts *Timesheet) (string, error) {
+func (r *repository) InsertTimesheet(ctx context.Context, ts *Timesheet, wArr []*WeekHrs, wDayArr []*WeekDay) (string, error) {
 	var err error
 	var loginName string
+	tx, _ := r.db.Begin(ctx)
+
 	insertTimesheetQry := `INSERT INTO public.timesheets
 						(id, status, placement, info, total_hours, "month", "year", 
 						week_hours_info, week_day_info, login_name)
 						VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
 
-	if _, err = r.db.Exec(ctx, insertTimesheetQry, ts.ID, ts.Status, ts.Placement,
+	if _, err = tx.Exec(ctx, insertTimesheetQry, ts.ID, ts.Status, ts.Placement,
 		ts.Info, ts.TotalHours, ts.Month, ts.Year, ts.WeekHrs, ts.WeekDay, ts.LoginName); err != nil {
+		tx.Rollback(ctx)
 		log.Error().Err(err).Str("loginName", ts.LoginName).Msg("Error while inserting the timesheet data")
 		return "", err
 	}
+
+	insertIntoWeekHrs := `INSERT INTO public.week_hours_info
+	(login_name, "month", "year", week_info, day1, day2, day3, day4, day5)
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);
+	`
+	for _, weekHrs := range wArr {
+		if _, err = tx.Exec(ctx, insertIntoWeekHrs, ts.LoginName, ts.Month, ts.Year,
+			weekHrs.WeekInfo, weekHrs.Day1, weekHrs.Day2, weekHrs.Day3, weekHrs.Day4, weekHrs.Day5); err != nil {
+			tx.Rollback(ctx)
+			log.Error().Err(err).Str("login_name", ts.LoginName).Msg("Error while insering into week hours info table")
+			return "", err
+		}
+	}
+
+	insertIntoWeekDay := `INSERT INTO public.week_day_info
+	(login_name, "month", "year", week_info, day1, day2, day3, day4, day5)
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);
+	
+	`
+	for _, weekDay := range wDayArr {
+		if _, err = tx.Exec(ctx, insertIntoWeekDay, ts.LoginName, ts.Month, ts.Year,
+			weekDay.WeekInfo, weekDay.Day1, weekDay.Day2, weekDay.Day3, weekDay.Day4, weekDay.Day5); err != nil {
+			tx.Rollback(ctx)
+			log.Error().Err(err).Str("login_name", ts.LoginName).Msg("Error while insering into week hours info table")
+			return "", err
+		}
+	}
+
+	tx.Commit(ctx)
+
 	loginName = ts.LoginName
 	return loginName, nil
 }
@@ -80,19 +114,35 @@ func (repo *repository) SelectTimesheetByLoginName(ctx context.Context, loginNam
 	return isExisting, nil
 }
 
-func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int) (string, error) {
+func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int, wArr []*WeekHrs) (string, error) {
 
+	tx, _ := repo.db.Begin(ctx)
 	var err error
 	var res string
 	UpdateQry := `UPDATE public.timesheets
 	SET placement=$1, info=$2, total_hours=$3, week_hours_info=$4
-	WHERE login_name =$5 AND "year"=$6 AND "month"=$7;
+	WHERE login_name=$5 AND "year"=$6 AND "month"=$7;
 	`
-	if _, err = repo.db.Exec(ctx, UpdateQry, ts.Placement, ts.Info, ts.TotalHours, ts.WeekHrs,
+	if _, err = tx.Exec(ctx, UpdateQry, ts.Placement, ts.Info, ts.TotalHours, ts.WeekHrs,
 		loginName, year, month); err != nil {
+		tx.Rollback(ctx)
 		return "", err
 	}
 
+	updateWeekHRS := `UPDATE public.week_hours_info
+	SET  day1=$1, day2=$2, day3=$3, day4=$4, day5=$5, updated_at=$6
+	WHERE login_name=$7 AND "month"=$8 AND "year"=$9 AND week_info=$10;
+	`
+
+	for _, weekhrs := range wArr {
+		if _, err = tx.Exec(ctx, updateWeekHRS, weekhrs.Day1, weekhrs.Day2, weekhrs.Day3, weekhrs.Day4,
+			weekhrs.Day5, time.Now(), loginName, month, year, weekhrs.WeekInfo); err != nil {
+			tx.Rollback(ctx)
+			log.Error().Err(err).Msg("Error while updating week hrs info")
+			return "", err
+		}
+	}
+	tx.Commit(ctx)
 	res = fmt.Sprintf("Updated Sucessfully with given criteria %s,%d,%d", loginName, month, year)
 	return res, nil
 
