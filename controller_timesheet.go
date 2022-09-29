@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 	"timesheet/commons/res"
 	"timesheet/timesheets"
 
@@ -20,7 +22,6 @@ func createTimesheet(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Str("loginname", t.LoginName).Msg("Unable to parse timesheet json to struct")
 		res.SendError(w, r, err, config.Debug.PrintRootCause)
 	}
-	loginName = t.LoginName
 
 	loginName, err = timesheetService.CreateTimesheet(r.Context(), t)
 	if err != nil {
@@ -137,7 +138,7 @@ func deleteTimesheet(w http.ResponseWriter, r *http.Request) {
 
 func addorUpdateNotes(w http.ResponseWriter, r *http.Request) {
 	var err error
-	notes := &timesheets.AddorUpdateNotes{}
+	notes := &timesheets.Notes{}
 	var response string
 
 	if err = json.NewDecoder(r.Body).Decode(notes); err != nil {
@@ -152,4 +153,52 @@ func addorUpdateNotes(w http.ResponseWriter, r *http.Request) {
 	}
 	res.SendResponse(w, r, res.OK, response)
 
+}
+
+func generateCSV(w http.ResponseWriter, r *http.Request) {
+	var err error
+	// var weekInt, monthInt, yearInt int
+
+	// loginName := chi.URLParam(r, "loginName")
+	// week := chi.URLParam(r, "week")
+
+	// weekInt, err = strconv.Atoi(week)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("error while converting week datatype string to int")
+	// }
+
+	// month := chi.URLParam(r, "month")
+	// monthInt, err = strconv.Atoi(month)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("error while converting month datatype string to int")
+	// }
+
+	// year := chi.URLParam(r, "year")
+	// yearInt, err = strconv.Atoi(year)
+	// if err != nil {
+	// 	log.Error().Err(err).Msg("error while converting year datatype string to int")
+	// }
+
+	var data string
+	req := []*timesheets.GetTimesheet{}
+
+	length := int(r.ContentLength)
+	datalen := make([]byte, length)
+	r.Body.Read(datalen)
+	json.Unmarshal(datalen, &req)
+
+	strTime := time.Now().Format("2006_01_02_15:04:05")
+
+	//data, err = timesheetService.GenerateCSV(r.Context(), req)
+	if err != nil {
+		log.Error().Err(err).Msg("error while calling GetTimesshetsByWeek")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	} else if data == "" {
+		res.SendResponse(w, r, res.RecordNotFound, nil)
+	} else {
+		filename := fmt.Sprintf("\"Timesheet-Report-%s.csv\"", strTime)
+		w.Header().Add("Content-Disposition", "attachment; filename= "+filename)
+		w.Header().Add("x-export-filename", filename)
+		res.WriteCSV(w, r, data)
+	}
 }

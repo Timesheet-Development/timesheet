@@ -75,7 +75,6 @@ func loginUser(w http.ResponseWriter, r *http.Request) {
 			HttpOnly: true,
 		}
 		http.SetCookie(w, &cookie)
-
 	}
 }
 

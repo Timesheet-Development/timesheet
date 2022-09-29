@@ -29,6 +29,7 @@ type User struct {
 	WorkMail             string    `db:"work_mail"`
 	PersonalMail         string    `db:"personal_mail"`
 	PhoneNumber          string    `db:"phone_number"`
+	UserType             UserType  `db:"user_type"`
 	CreatedAt            time.Time `db:"created_at"`
 	UpdatedAt            time.Time `db:"updated_at"`
 }
@@ -56,3 +57,12 @@ type UpdatePassword struct {
 	OldPassword string
 	NewPassword string
 }
+
+type UserType int
+
+const (
+	UserTypeOperator UserType = 0
+	UserTypeApprover UserType = 1
+	UserTypeManager  UserType = 2
+	UserTypeEmployee UserType = 3
+)

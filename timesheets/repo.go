@@ -16,19 +16,21 @@ import (
 type Repository interface {
 	InsertTimesheet(ctx context.Context, ts *Timesheet, wArr []*WeekHrs, wDayArr []*WeekDay) (string, error)
 
-	SelectTimesheetByLoginName(ctx context.Context, loginName string, month, year int) (bool, error)
+	SelectTimesheetByLoginName(ctx context.Context, loginName string, month, year int) (*Timesheet, error)
 
 	UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int, wArr []*WeekHrs) (string, error)
 
 	SelectAllTimesheetByLoginName(ctx context.Context, loginName string) ([]*GetAllTimesheets, error)
 
-	SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error)
+	SelectTimesheetByGivenCriteria(ctx context.Context, loginName string, month, year int) (*GetAllTimesheets, error)
+
+	SelectWeekHoursByWeek(ctx context.Context, loginName string, week, month, year int) (*WeekHrs, error)
 
 	DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error)
 
 	SelectTimesheetUUID(ctx context.Context, loginName string, month, year int) (string, error)
 
-	UpsertTimesheetNotes(ctx context.Context, notes *AddorUpdateNotes, uuids string) (string, error)
+	UpsertTimesheetNotes(ctx context.Context, notes *Notes) (string, error)
 }
 
 type repository struct {
@@ -89,29 +91,20 @@ func (r *repository) InsertTimesheet(ctx context.Context, ts *Timesheet, wArr []
 	return loginName, nil
 }
 
-func (repo *repository) SelectTimesheetByLoginName(ctx context.Context, loginName string, month, year int) (bool, error) {
+func (repo *repository) SelectTimesheetByLoginName(ctx context.Context, loginName string, month, year int) (*Timesheet, error) {
 	var err error
-	var isExisting bool
-	var count int
 
-	selectQry := `select count(*) from timesheets t
-	 where t.login_name = $1 and t."month" = $2 and t."year" = $3;`
-	if err = pgxscan.Get(
-		ctx, repo.db, &count, selectQry, loginName, month, year,
-	); err != nil {
-		// Handle query or rows processing error.
-		if pgxscan.NotFound(err) {
-			//return nil, &res.AppError{ResponseCode: UserDoesNotExist, Cause: err}
-			//No error, but no user either
-			return false, nil
-		}
-		return false, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
+	ts := &Timesheet{}
+
+	selectQry := `select * from timesheets
+	 where login_name=$1 and month=$2 and year=$3;`
+
+	if err = repo.db.QueryRow(ctx, selectQry, loginName, month, year).Scan(&ts.ID, &ts.LoginName,
+		&ts.Status, &ts.Placement, &ts.Info, &ts.TotalHours, &ts.Month, &ts.Year, &ts.WeekHrs, &ts.WeekDay, &ts.CreatedAt, &ts.UpdatedAt); err != nil {
+		log.Error().Err(err).Msg("Error while fetching timesheet information")
 	}
 
-	if count > 0 {
-		isExisting = true
-	}
-	return isExisting, nil
+	return ts, nil
 }
 
 func (repo *repository) UpdateTimesheetByGivenCriteria(ctx context.Context, ts *Timesheet, loginName string, month, year int, wArr []*WeekHrs) (string, error) {
@@ -153,8 +146,10 @@ func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, login
 	var rows pgx.Rows
 	tsArr := []*GetAllTimesheets{}
 
-	selectQry := `select login_name,placement,info,"month","year",total_hours,status,week_hours_info,week_day_info from timesheets t 
-				  where t.login_name = $1;`
+	selectQry := `select login_name,placement,info,"month","year",total_hours,status,
+				  week_hours_info,week_day_info from timesheets t 
+				  where t.login_name = $1
+				  order by created_at desc;`
 
 	rows, err = repo.db.Query(ctx, selectQry, loginName)
 	if err != nil {
@@ -180,11 +175,12 @@ func (repo *repository) SelectAllTimesheetByLoginName(ctx context.Context, login
 	return tsArr, nil
 }
 
-func (repo *repository) SelectTimesheetByWeek(ctx context.Context, loginName string, week, month, year int) (*GetAllTimesheets, error) {
+func (repo *repository) SelectTimesheetByGivenCriteria(ctx context.Context, loginName string, month, year int) (*GetAllTimesheets, error) {
 	var err error
 	ts := &GetAllTimesheets{}
 
-	selectQry := `select login_name,placement,info,"month","year",total_hours,status,week_hours_info,week_day_info from timesheets t 
+	selectQry := `select login_name,placement,info,"month","year",total_hours,
+				  status,week_hours_info,week_day_info from timesheets t 
 				  where t.login_name = $1
 				  and t."month" = $2
 				  and t."year" = $3;`
@@ -204,18 +200,67 @@ func (repo *repository) SelectTimesheetByWeek(ctx context.Context, loginName str
 	return ts, nil
 }
 
+func (repo *repository) SelectWeekHoursByWeek(ctx context.Context, loginName string, week, month, year int) (*WeekHrs, error) {
+
+	var err error
+	w := &WeekHrs{}
+
+	selectWeekInfo := `select week_info ,day1 ,day2 ,day3 ,day4 ,day5  from week_hours_info whi 
+	where login_name = $1 and "month" = $2 and "year" = $3
+	and week_info = $4;`
+
+	if err = pgxscan.Get(
+		ctx, repo.db, w, selectWeekInfo, loginName, month, year, week,
+	); err != nil {
+		// Handle query or rows processing error.
+		if pgxscan.NotFound(err) {
+			//return nil, &res.AppError{ResponseCode: UserDoesNotExist, Cause: err}
+			//No error, but no user either
+			return nil, nil
+		}
+		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
+	}
+	return w, nil
+}
+
 func (repo *repository) DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error) {
 	var err error
 	var response string
+
+	tx, _ := repo.db.Begin(ctx)
 
 	deletQry := `delete from timesheets t
 				where t.login_name = $1
 				and t.month = $2
 				and t.year = $3`
-	if _, err = repo.db.Exec(ctx, deletQry, loginName, month, year); err != nil {
+	if _, err = tx.Exec(ctx, deletQry, loginName, month, year); err != nil {
 		log.Error().Err(err).Str("loginName", loginName).Msg("Error while deleting the data")
+		tx.Rollback(ctx)
 		return "", err
 	}
+
+	deleteWeekHrs := `delete from week_hours_info whi 
+					  where whi.login_name = $1
+					  and whi.month = $2
+					  and whi.year = $3;`
+	if _, err = tx.Exec(ctx, deleteWeekHrs, loginName, month, year); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Error while deleting the data")
+		tx.Rollback(ctx)
+		return "", err
+	}
+
+	deleteWeekDay := `delete from week_day_info wdi 
+	where wdi.login_name = $1
+	and wdi.month = $2
+	and wdi.year = $3;`
+	if _, err = tx.Exec(ctx, deleteWeekDay, loginName, month, year); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Error while deleting the data")
+		tx.Rollback(ctx)
+		return "", err
+	}
+
+	tx.Commit(ctx)
+
 	response = fmt.Sprintf("Successfully delete the record for the given criteria %s %d %d", loginName, month, year)
 
 	return response, nil
@@ -235,20 +280,18 @@ func (repo *repository) SelectTimesheetUUID(ctx context.Context, loginName strin
 	return uuid, nil
 }
 
-func (repo *repository) UpsertTimesheetNotes(ctx context.Context, notes *AddorUpdateNotes, uuids string) (string, error) {
+func (repo *repository) UpsertTimesheetNotes(ctx context.Context, notes *Notes) (string, error) {
 
 	var err error
 	var res string
 
-	if uuids == "" {
-		uuids = uuid.New().String()
-	}
+	uuid := uuid.New()
 
 	upsertQry := `insert into timesheets(id,login_name,month,year,info) values($1,$2,$3,$4,$5)
-				 on conflict(id,month,year)
+				 on conflict(login_name,month,year)
 				 do update set info = excluded.info`
 
-	if _, err = repo.db.Exec(ctx, upsertQry, uuids, notes.LoginName, notes.Month, notes.Year, notes.Info); err != nil {
+	if _, err = repo.db.Exec(ctx, upsertQry, uuid, notes.LoginName, notes.Month, notes.Year, notes.Info); err != nil {
 		return "", err
 	}
 

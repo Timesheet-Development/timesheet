@@ -23,7 +23,9 @@ type Service interface {
 
 	DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error)
 
-	AddorUpdatenotes(ctx context.Context, notes *AddorUpdateNotes) (string, error)
+	AddorUpdatenotes(ctx context.Context, notes *Notes) (string, error)
+
+	//GenerateCSV(ctx context.Context, req []*GetTimesheet) (string, error)
 }
 
 type service struct {
@@ -39,7 +41,7 @@ func NewService(repo Repository, userRepo user.Repository) Service {
 func (s *service) CreateTimesheet(ctx context.Context, ts *Timesheet) (string, error) {
 	var err error
 	var loginName string
-	user := &user.User{}
+	userRes := &user.User{}
 
 	if ts.LoginName == "" {
 		err = errors.New("loginName is empty")
@@ -49,44 +51,51 @@ func (s *service) CreateTimesheet(ctx context.Context, ts *Timesheet) (string, e
 	//Transforming fields
 	ts.LoginName = strings.ToUpper(ts.LoginName)
 
-	user, err = s.userRepo.SelectUserByLoginName(ctx, ts.LoginName)
+	userRes, err = s.userRepo.SelectUserByLoginName(ctx, ts.LoginName)
 	if err != nil {
 		log.Error().Err(err).Str("loginName", ts.LoginName).Msg("User details not found for the given loginName")
 		return "", err
 	}
 
-	log.Info().Str("loginName", user.LoginName).Msg("logging the timesheet info")
+	log.Info().Str("loginName", userRes.LoginName).Msg("logging the timesheet info")
 
-	var sb strings.Builder
-	sb.WriteString(user.Department)
-	sb.WriteString(" ")
-	sb.WriteString(user.JobTitle)
+	if userRes.UserType == user.UserTypeApprover || userRes.UserType == user.UserTypeEmployee || userRes.UserType == user.UserTypeManager {
 
-	ts.ID = uuid.New()
+		var sb strings.Builder
+		sb.WriteString(userRes.Department)
+		sb.WriteString(" ")
+		sb.WriteString(userRes.JobTitle)
 
-	ts.LoginName = user.LoginName
-	ts.Placement = sb.String()
-	ts.Status = string(timesheetStatusSubmitted)
+		ts.ID = uuid.New()
 
-	//Unmarshalling the week hrs json
-	wArr := []*WeekHrs{}
+		ts.LoginName = userRes.LoginName
+		ts.Placement = sb.String()
+		ts.Status = string(timesheetStatusSubmitted)
 
-	if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
-		log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
-	}
+		//Unmarshalling the week hrs json
+		wArr := []*WeekHrs{}
 
-	//Unmarshalling week day json
-	wDayArr := []*WeekDay{}
-	if err = json.Unmarshal(ts.WeekDay, &wDayArr); err != nil {
-		log.Error().Err(err).Msg("Error while unmarshalling week day json")
-	}
+		if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
+			log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
+		}
 
-	for _, eachDayHrs := range wArr {
-		ts.TotalHours += eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
-	}
+		//Unmarshalling week day json
+		wDayArr := []*WeekDay{}
+		if err = json.Unmarshal(ts.WeekDay, &wDayArr); err != nil {
+			log.Error().Err(err).Msg("Error while unmarshalling week day json")
+		}
 
-	if loginName, err = s.repo.InsertTimesheet(ctx, ts, wArr, wDayArr); err != nil {
-		log.Error().Err(err).Str("loginName", loginName).Msg("Error while calling repo in timesheet service")
+		for _, eachDayHrs := range wArr {
+			ts.TotalHours += eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+		}
+
+		if loginName, err = s.repo.InsertTimesheet(ctx, ts, wArr, wDayArr); err != nil {
+			log.Error().Err(err).Str("loginName", loginName).Msg("Error while calling repo in timesheet service")
+			return "", err
+		}
+	} else {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Operator is not allowed to log timesheets")
+		err = errors.New("Operator is not allowed to log timesheets")
 		return "", err
 	}
 
@@ -100,7 +109,7 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 		Step3: Call repo from service.
 	*/
 	var err error
-	var isExisting bool
+	var tsResponse *Timesheet
 	var res string
 
 	if loginName == "" {
@@ -120,13 +129,13 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 
 	loginName = strings.ToUpper(loginName)
 
-	isExisting, err = s.repo.SelectTimesheetByLoginName(ctx, loginName, month, year)
+	tsResponse, err = s.repo.SelectTimesheetByLoginName(ctx, loginName, month, year)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error while fetching Timesheet with given LoginName")
 		return "", err
 	}
 
-	if isExisting {
+	if tsResponse != nil {
 		//Unmarshalling the week hrs json
 		wArr := []*WeekHrs{}
 
@@ -136,6 +145,16 @@ func (s *service) UpdateTimesheet(ctx context.Context, ts *Timesheet, loginName 
 
 		for _, eachDayHrs := range wArr {
 			ts.TotalHours += eachDayHrs.Day1 + eachDayHrs.Day2 + eachDayHrs.Day3 + eachDayHrs.Day4 + eachDayHrs.Day5
+		}
+
+		if ts.Placement == "" {
+			ts.Placement = tsResponse.Placement
+		}
+		if ts.Info == "" {
+			ts.Info = tsResponse.Info
+		}
+		if ts.WeekHrs == nil {
+			ts.WeekHrs = tsResponse.WeekHrs
 		}
 
 		res, err = s.repo.UpdateTimesheetByGivenCriteria(ctx, ts, loginName, month, year, wArr)
@@ -151,6 +170,8 @@ func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]
 	var err error
 	ts := []*GetAllTimesheets{}
 
+	loginName = strings.ToUpper(loginName)
+
 	if loginName == "" {
 		err = errors.New("loginName is empty")
 		return nil, err
@@ -165,6 +186,10 @@ func (s *service) GetListofTimesheets(ctx context.Context, loginName string) ([]
 func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, week, month, year int) (*GetTimesheet, error) {
 	var err error
 	ts := &GetAllTimesheets{}
+
+	w := &WeekHrs{}
+
+	loginName = strings.ToUpper(loginName)
 
 	if loginName == "" {
 		err = errors.New("loginName is empty")
@@ -186,35 +211,43 @@ func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, wee
 		return nil, err
 	}
 
-	if ts, err = s.repo.SelectTimesheetByWeek(ctx, loginName, week, month, year); err != nil {
-		log.Error().Err(err).Str("loginName", loginName).Msgf("Error while fetching timeshhet infor by the given week %d", week)
+	if ts, err = s.repo.SelectTimesheetByGivenCriteria(ctx, loginName, month, year); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msgf("Error while fetching timesheet info by the given week %d", week)
 		return nil, err
 	}
 
-	log.Info().Msgf("json data from db %v", ts.WeekHrs)
-
-	//Step1 : Unmarshal the week hrs info data
-
-	wArr := []WeekHrs{}
-
-	if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
-		log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
+	if w, err = s.repo.SelectWeekHoursByWeek(ctx, loginName, week, month, year); err != nil {
+		log.Error().Err(err).Str("loginName", loginName).Msg("Error while fetching timesheet info by the given week from week hours table")
+		return nil, err
 	}
 
-	log.Info().Msgf("un marshalled data into golang struct %v", wArr)
+	// log.Info().Msgf("json data from db %v", ts.WeekHrs)
 
-	w := WeekHrs{}
+	// //Step1 : Unmarshal the week hrs info data
 
-	for _, wI := range wArr {
-		if wI.WeekInfo == week {
-			w.WeekInfo = wI.WeekInfo
-			w.Day1 = wI.Day1
-			w.Day2 = wI.Day2
-			w.Day3 = wI.Day3
-			w.Day4 = wI.Day4
-			w.Day5 = wI.Day5
-		}
-	}
+	// wArr := []WeekHrs{}
+
+	// if err = json.Unmarshal(ts.WeekHrs, &wArr); err != nil {
+	// 	log.Error().Err(err).Msg("Error while unmarshalling week hrs json")
+	// }
+
+	// log.Info().Msgf("un marshalled data into golang struct %v", wArr)
+
+	// w := WeekHrs{}
+
+	// for _, wI := range wArr {
+
+	// 	if wI.WeekInfo == week {
+	// 		w.WeekInfo = wI.WeekInfo
+	// 		w.Day1 = wI.Day1
+	// 		w.Day2 = wI.Day2
+	// 		w.Day3 = wI.Day3
+	// 		w.Day4 = wI.Day4
+	// 		w.Day5 = wI.Day5
+
+	// 		break
+	// 	}
+	// }
 
 	timesheet := &GetTimesheet{
 		LoginName:  ts.LoginName,
@@ -233,25 +266,27 @@ func (s *service) GetTimesheetsByWeek(ctx context.Context, loginName string, wee
 func (s *service) DeleteTimesheet(ctx context.Context, loginName string, month, year int) (string, error) {
 	var err error
 	var response string
-	var isExisting bool
+	var ts *Timesheet
+
+	loginName = strings.ToUpper(loginName)
 
 	if loginName == "" {
 		err = errors.New("Login name is invalid")
 		return "", err
 	}
 
-	isExisting, err = s.repo.SelectTimesheetByLoginName(ctx, loginName, month, year)
+	ts, err = s.repo.SelectTimesheetByLoginName(ctx, loginName, month, year)
 	if err != nil {
 		log.Error().Err(err).Msgf("Error while fetching Timesheet with given LoginName")
 		return "", err
 	}
-	if !isExisting {
+	if ts == nil {
 
 		response = fmt.Sprintf("We don't have data with the given login Name %s", loginName)
 		return response, nil
 	}
 
-	if isExisting {
+	if ts != nil {
 		response, err = s.repo.DeleteTimesheet(ctx, loginName, month, year)
 		if err != nil {
 			log.Error().Err(err).Str("loginname", loginName).Msg("Error while calling repo DeleteTimesheet")
@@ -261,26 +296,27 @@ func (s *service) DeleteTimesheet(ctx context.Context, loginName string, month, 
 	return response, nil
 }
 
-func (s *service) AddorUpdatenotes(ctx context.Context, notes *AddorUpdateNotes) (string, error) {
+func (s *service) AddorUpdatenotes(ctx context.Context, notes *Notes) (string, error) {
 	var err error
 	var res string
 
-	var uuid string
+	notes.LoginName = strings.ToUpper(notes.LoginName)
 
 	if notes.LoginName == "" && notes.Month == 0 && notes.Year == 0 {
 		err = errors.New("Criteria is not valid")
 		return "", err
 	}
 
-	uuid, err = s.repo.SelectTimesheetUUID(ctx, notes.LoginName, notes.Month, notes.Year)
-	if err != nil {
-		return "", err
-	}
-
-	res, err = s.repo.UpsertTimesheetNotes(ctx, notes, uuid)
+	res, err = s.repo.UpsertTimesheetNotes(ctx, notes)
 	if err != nil {
 		return "", err
 	}
 
 	return res, nil
 }
+
+// func (s *service) GenerateCSV(ctx context.Context, req []*GetTimesheet) (string, error) {
+// 	var err error
+// 	var res string
+// 	if res ,err = s.repo.SelectTimesheetByLoginName()
+// }

@@ -63,8 +63,8 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 
 	insertqry := `INSERT INTO users (id, login_name, "password", "name", address, department, 
 	security_no, dob, city, state, job_title, is_perm, gender, passport, reporting_mngr, work_mail,
-	personal_mail,phone_number) 
-	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18);
+	personal_mail,phone_number,user_type) 
+	VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19);
 	`
 	user.Id = uuid.New()
 
@@ -74,7 +74,7 @@ func (repo *repository) InsertUser(ctx context.Context, user *User) (*uuid.UUID,
 		user.Name, user.Address, user.Department,
 		user.SocailSecurityNumber, user.DOB, user.City, user.State, user.JobTitle,
 		user.IsPermanent, user.Gender, user.Passport, user.ReportingManager, user.WorkMail,
-		user.PersonalMail, user.PhoneNumber); err != nil {
+		user.PersonalMail, user.PhoneNumber, user.UserType); err != nil {
 		return nil, &res.AppError{ResponseCode: res.DatabaseError, Cause: err}
 	}
 
@@ -106,14 +106,14 @@ func (repo *repository) UpdateUser(ctx context.Context, loginName string, user *
 	updateUserQuery := `UPDATE public.users
 	SET "name" = $1, dob = $2, city = $3, state = $4,
 	address = $5, job_title = $6, gender = $7, passport = $8, 
-	work_mail = $9, personal_mail = $10, phone_number = $11, updated_at = $12
-	WHERE login_name = $13;
+	work_mail = $9, personal_mail = $10, phone_number = $11, updated_at = $12,reporting_mngr = $13
+	WHERE login_name = $14;
 	`
 
 	if _, err = repo.db.Exec(ctx, updateUserQuery, user.Name, user.DOB, user.City, user.State,
 		user.Address, user.JobTitle, user.Gender, user.Passport, user.WorkMail,
-		user.PersonalMail, user.PhoneNumber, time.Now(), loginName); err != nil {
-		log.Printf("Error whil performing update user %v\n", err)
+		user.PersonalMail, user.PhoneNumber, time.Now(), user.ReportingManager, loginName); err != nil {
+		log.Printf("Error while performing update user %v\n", err)
 		return "", err
 	}
 

@@ -42,7 +42,7 @@ type GetTimesheet struct {
 	TotalHours float64
 	Month      int
 	Year       int
-	WeekData   WeekHrs
+	WeekData   *WeekHrs
 }
 
 type timesheetStatus string
@@ -72,7 +72,7 @@ type WeekDay struct {
 	Day5     string
 }
 
-type AddorUpdateNotes struct {
+type Notes struct {
 	LoginName string
 	Month     int
 	Year      int

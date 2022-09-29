@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/render"
 )
 
-//ResponseCode signifies either a positive or a negative outcome
+// ResponseCode signifies either a positive or a negative outcome
 type ResponseCode struct {
 	//Code signifies either a positive or a negative response code
 	Code string `json:"c"`
@@ -20,7 +20,7 @@ type ResponseCode struct {
 	HttpStatus int `json:"-"`
 }
 
-//Response is a standard web response
+// Response is a standard web response
 type Response struct {
 	//Code signifies either a positive or a negative response code
 	*ResponseCode
@@ -30,8 +30,8 @@ type Response struct {
 	Cause string `json:"v"`
 }
 
-//AppError is an application error that communicates error information through
-//well defined error codes
+// AppError is an application error that communicates error information through
+// well defined error codes
 type AppError struct {
 	*ResponseCode
 	Cause error
@@ -56,7 +56,7 @@ func IsAppErrorEquals(e error, code *ResponseCode) bool {
 	return false
 }
 
-//SendError returns a well-formatted standard error response to the browser
+// SendError returns a well-formatted standard error response to the browser
 func SendError(w http.ResponseWriter, r *http.Request, e error, verbose bool) {
 
 	cause := ""
@@ -91,18 +91,24 @@ func SendError(w http.ResponseWriter, r *http.Request, e error, verbose bool) {
 	}
 }
 
-//SendResponse returns a well-formatted standard error response to the browser
+// SendResponse returns a well-formatted standard error response to the browser
 func SendResponse(w http.ResponseWriter, r *http.Request, code *ResponseCode, data interface{}) {
 	render.Status(r, code.HttpStatus)
 	render.JSON(w, r, Response{code, data, ""})
 }
 
-///// Standard Response Codes ////
+// WriteCSV formats and the sends the response to the browser as a downloadable CSV file
+func WriteCSV(w http.ResponseWriter, r *http.Request, data string) {
+	render.Status(r, http.StatusOK)
+	render.Data(w, r, []byte(data))
+}
+
+// /// Standard Response Codes ////
 var InternalServerError = &ResponseCode{"InternalServerError", "Internal Failure. Please retry", http.StatusInternalServerError}
 var NoContent = &ResponseCode{"NoContent", "No content", http.StatusNoContent}
 var OK = &ResponseCode{"OK", "Your request is completed", http.StatusOK}
 var BadRequest = &ResponseCode{"BadRequest", "One or more validation errors occurred.", http.StatusBadRequest}
 
-//// Standard Database Errors
+// // Standard Database Errors
 var DatabaseError = &ResponseCode{"DatabaseError", "Internal Failure. Please retry", http.StatusInternalServerError}
 var RecordNotFound = &ResponseCode{"RecordNotFound", "Record not found", http.StatusNotFound}

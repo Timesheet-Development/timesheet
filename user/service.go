@@ -59,6 +59,8 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 
 	var err error
 
+	var passwordHash, socailSecurityNoHash []byte
+
 	//Transforming fields
 	iam.LoginName = strings.ToUpper(iam.LoginName)
 
@@ -85,6 +87,11 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 		return nil, err
 	}
 
+	if iam.SocailSecurityNumber == "" {
+		err = errors.New("social secutiry number is given empty. it's a mandatory field")
+		return nil, err
+	}
+
 	log.Info().Msgf("Checking if user details [%v] exists", iam)
 
 	var userExists = false
@@ -101,16 +108,20 @@ func (s *service) CreateUser(ctx context.Context, iam *User) (*uuid.UUID, error)
 	//Generate a password hash.
 	log.Info().Msgf("Generating password hash for [%s]\n", iam.LoginName)
 
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(iam.Password), bcrypt.DefaultCost)
-	if err != nil {
-		log.Error().Err(err).Msgf("Error occurred while hashing password for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
-		return nil, err
+	if iam.Password != "" {
+		passwordHash, err = bcrypt.GenerateFromPassword([]byte(iam.Password), bcrypt.DefaultCost)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error occurred while hashing password for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
+			return nil, err
+		}
 	}
 
-	socailSecurityNoHash, err := bcrypt.GenerateFromPassword([]byte(iam.SocailSecurityNumber), bcrypt.DefaultCost)
-	if err != nil {
-		log.Error().Err(err).Msgf("Error occurred while hashing Social Security Number for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
-		return nil, err
+	if iam.SocailSecurityNumber != "" {
+		socailSecurityNoHash, err = bcrypt.GenerateFromPassword([]byte(iam.SocailSecurityNumber), bcrypt.DefaultCost)
+		if err != nil {
+			log.Error().Err(err).Msgf("Error occurred while hashing Social Security Number for user [%s]. Error is [%s]\n", iam.LoginName, err.Error())
+			return nil, err
+		}
 	}
 
 	iam.Password = string(passwordHash)
@@ -273,18 +284,67 @@ func (s *service) LoginUser(ctx context.Context, user *User) (string, error) {
 func (s *service) ModifyUser(ctx context.Context, loginName string, user *User) (string, error) {
 	var err error
 
-	var isUserExists bool
+	var u *User
 
 	var updateStr string
 
-	if isUserExists, err = s.IsUserAlreadyExisting(ctx, loginName); err != nil {
+	loginName = strings.ToUpper(loginName)
+
+	if u, err = s.GetUser(ctx, loginName); err != nil {
 		log.Error().Err(err).Msg("Error while checking user already exists")
 		return "", err
 	}
 
-	if isUserExists {
+	if u != nil {
 
-		loginName = strings.ToUpper(loginName)
+		if user.Name == "" {
+			user.Name = u.Name
+		}
+
+		if user.DOB.String() == "0001-01-01 00:00:00 +0000 UTC" || user.DOB.String() == "" {
+			user.DOB = u.DOB
+		}
+
+		if user.City == "" {
+			user.City = u.City
+		}
+
+		if user.State == "" {
+			user.State = u.State
+		}
+
+		if user.Address == "" {
+			user.Address = u.Address
+		}
+
+		if user.JobTitle == "" {
+			user.JobTitle = u.JobTitle
+		}
+
+		if user.Gender == "" {
+			user.Gender = u.Gender
+		}
+
+		if user.Passport == "" {
+			user.Passport = u.Passport
+		}
+
+		if user.WorkMail == "" {
+			user.WorkMail = u.WorkMail
+		}
+
+		if user.PersonalMail == "" {
+			user.PersonalMail = u.PersonalMail
+		}
+
+		if user.PhoneNumber == "" {
+			user.PhoneNumber = u.PhoneNumber
+		}
+
+		if user.ReportingManager.String() == "00000000-0000-0000-0000-000000000000" || user.ReportingManager.String() == "" {
+			user.ReportingManager = u.ReportingManager
+
+		}
 
 		if updateStr, err = s.repo.UpdateUser(ctx, loginName, user); err != nil {
 			log.Error().Err(err).Msg("Error while performing update user")
