@@ -31,6 +31,8 @@ type Repository interface {
 	SelectTimesheetUUID(ctx context.Context, loginName string, month, year int) (string, error)
 
 	UpsertTimesheetNotes(ctx context.Context, notes *Notes) (string, error)
+
+	SelectTimesheetsByStatus(ctx context.Context, status string) ([]*GetAllTimesheets, error)
 }
 
 type repository struct {
@@ -297,4 +299,10 @@ func (repo *repository) UpsertTimesheetNotes(ctx context.Context, notes *Notes) 
 
 	res = "Added notes successfully"
 	return res, nil
+}
+
+func (repo *repository) SelectTimesheetsByStatus(ctx context.Context, status string) ([]*GetAllTimesheets, error) {
+	var err error
+	return nil, err
+
 }

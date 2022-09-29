@@ -202,3 +202,15 @@ func generateCSV(w http.ResponseWriter, r *http.Request) {
 		res.WriteCSV(w, r, data)
 	}
 }
+func listSubmittedTimesheets(w http.ResponseWriter, r *http.Request) {
+	var err error
+	status := chi.URLParam(r, "status")
+
+	timesheets := []*timesheets.GetAllTimesheets{}
+
+	if timesheets, err = timesheetService.ListSubmittedTimesheets(r.Context(), status); err != nil {
+		log.Error().Err(err).Str("status", status).Msg("Failed retriving submitted timesheets")
+		res.SendError(w, r, err, config.Debug.PrintRootCause)
+	}
+	res.SendResponse(w, r, res.OK, timesheets)
+}

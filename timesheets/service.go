@@ -25,6 +25,8 @@ type Service interface {
 
 	AddorUpdatenotes(ctx context.Context, notes *Notes) (string, error)
 
+	ListSubmittedTimesheets(ctx context.Context, status string) ([]*GetAllTimesheets, error)
+
 	//GenerateCSV(ctx context.Context, req []*GetTimesheet) (string, error)
 }
 
@@ -320,3 +322,21 @@ func (s *service) AddorUpdatenotes(ctx context.Context, notes *Notes) (string, e
 // 	var res string
 // 	if res ,err = s.repo.SelectTimesheetByLoginName()
 // }
+func (s *service) ListSubmittedTimesheets(ctx context.Context, status string) ([]*GetAllTimesheets, error) {
+	var err error
+
+	if status == "" {
+		err = errors.New("status is mandatory")
+		return nil, err
+	}
+
+	timesheets := []*GetAllTimesheets{}
+
+	if timesheets, err = s.repo.SelectTimesheetsByStatus(ctx, status); err != nil {
+		log.Error().Err(err).Str("status", status).Msg("Error while calling SelectTimesheetsByStatus ")
+		return nil, err
+	}
+
+	return timesheets, nil
+
+}

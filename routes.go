@@ -50,6 +50,8 @@ func addTimesheetRoutes(r *chi.Mux) {
 		r.Delete("/timesheets/{loginName}/{month}/{year}", deleteTimesheet)
 
 		r.Post("/timesheets/notes", addorUpdateNotes)
+
+		r.Get("/timesheets/{status}", listSubmittedTimesheets)
 	})
 }
 
